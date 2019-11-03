@@ -4,10 +4,11 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 import os
-from net import Decoder, Encoder, Net
+from net_1 import Decoder, Encoder, Transformer
 from path import MODEL_PATH, LOG_PATH
 from flyai.dataset import Dataset
 from model import Model
+import json
 
 # 超参
 parser = argparse.ArgumentParser()
@@ -28,9 +29,10 @@ os.makedirs(LOG_PATH, exist_ok=True)
 
 # 数据获取辅助类
 data = Dataset(epochs=args.EPOCHS, batch=args.BATCH, val_batch=args.BATCH)
-en = Encoder(20, 64)
-de = Decoder(3507, 20, 64)
-network = Net(en, de, device)
+# en = Encoder(20, 64)
+# de = Decoder(3507, 20, 64)
+
+network = Transformer(n_src_vocab=3507, n_tgt_vocab=3507, len_max_seq=64)
 loss_fn = nn.CrossEntropyLoss()
 
 optimizer = Adam(network.parameters())
@@ -72,7 +74,7 @@ for i in range(data.get_step()):
     input_length_tensor = torch.tensor(input_lengths).long()
     y_lengths = torch.tensor(y_lengths).long()
 
-    outputs = network(x_train, input_lengths, y_train)
+    outputs = Transformer(n_src_vocab=3507, n_tgt_vocab=3507, len_max_seq=64)
 
     optimizer.zero_grad()
     outputs = outputs.float()

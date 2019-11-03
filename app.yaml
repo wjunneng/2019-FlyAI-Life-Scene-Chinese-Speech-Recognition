@@ -10,7 +10,7 @@ virtualenv: flyai_env/bin/
 framework: PyTorch
 
 data:
-  id: 2019-FlyAI-Life-Scene-Chinese-Speech-Recognition
+  id: CommonVoiceChineseASR01
   name: Common Voice Chinese ASR
   category: speech
 
