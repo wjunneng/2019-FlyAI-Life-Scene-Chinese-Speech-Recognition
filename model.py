@@ -26,9 +26,12 @@ class Model(Base):
         network = torch.load(os.path.join(path, name))
         network = network.to(device)
         network.eval()
-        x_data = self.dataset.predict_data(**data)  # x_data shape: (batch,sen_len,embedding)
-        length = [int(x_data[0, -1, 0])]  ##因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
-        x_data = x_data[:, :-1, :]  ## 除去长度信息
+        # x_data shape: (batch,sen_len,embedding)
+        x_data = self.dataset.predict_data(**data)
+        # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
+        length = [int(x_data[0, -1, 0])]
+        # 除去长度信息
+        x_data = x_data[:, :-1, :]
         x_data = torch.from_numpy(x_data)
         x_data = x_data.permute(1, 0, 2)
         x_data = x_data.float().to(device)
@@ -51,10 +54,12 @@ class Model(Base):
 
         prediction = []
         for data in datas:
-
-            x_data = self.dataset.predict_data(**data)  # x_data shape: (batch,sen_len,embedding)
-            length = [int(x_data[0, -1, 0])]  ## 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
-            x_data = x_data[:, :-1, :]  ## 除去长度信息
+            # x_data shape: (batch,sen_len,embedding)
+            x_data = self.dataset.predict_data(**data)
+            # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
+            length = [int(x_data[0, -1, 0])]
+            # 除去长度信息
+            x_data = x_data[:, :-1, :]
             x_data = torch.from_numpy(x_data)
             x_data = x_data.permute(1, 0, 2)
             x_data = x_data.float().to(device)
