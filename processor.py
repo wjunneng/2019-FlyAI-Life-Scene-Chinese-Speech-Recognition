@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*
-import os
 import json
 import numpy as np
 import librosa
@@ -9,9 +8,8 @@ from flyai.processor.base import Base
 from path import DATA_PATH, WORDS_PATH
 from configuration.configuration import Configuration
 
-x = np.linspace(0, 400 - 1, 400, dtype=np.int64)
 # 汉明窗
-w = 0.54 - 0.46 * np.cos(2 * np.pi * (x) / (400 - 1))
+w = 0.54 - 0.46 * np.cos(2 * np.pi * np.linspace(0, 400 - 1, 400, dtype=np.int64) / (400 - 1))
 
 
 class Processor(Base):
@@ -21,6 +19,7 @@ class Processor(Base):
         self.char_dict = dict()
         self.char_dict_res = dict()
 
+        # 构建字典
         with open(WORDS_PATH) as fin:
             words = json.loads(fin.read())
         words = list(words.keys())
@@ -28,6 +27,7 @@ class Processor(Base):
         for i, word in enumerate(words):
             self.char_dict[word] = i
             self.char_dict_res[i] = word
+        print('vocab len: %d' % len(words))
 
     def input_x(self, audio_path):
         """
@@ -71,6 +71,7 @@ class Processor(Base):
         :param label:
         :return:
         """
+        print('label: %s' % label)
         # 获取单词索引
         word_list = [self.char_dict.get(word) for word in label if self.char_dict.get(word) is not None]
 

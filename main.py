@@ -14,17 +14,14 @@ from configuration.configuration import Configuration
 # 超参
 parser = argparse.ArgumentParser()
 # 训练轮数
-parser.add_argument("-e", "--EPOCHS", default=10, type=int, help="train epochs")
+parser.add_argument("-e", "--EPOCHS", default=1, type=int, help="train epochs")
 # 训练批次
-parser.add_argument("-b", "--BATCH", default=16, type=int, help="batch size")
+parser.add_argument("-b", "--BATCH", default=25, type=int, help="batch size")
+# 获取超参数
 args = parser.parse_args()
 
-# 判断gpu是否可用
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
-device = torch.device(device)
+# 获取device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 os.makedirs(MODEL_PATH, exist_ok=True)
 os.makedirs(LOG_PATH, exist_ok=True)
 
@@ -41,7 +38,6 @@ loss_fn = nn.CrossEntropyLoss()
 # 优化器
 optimizer = Adam(network.parameters())
 model = Model(data)
-iteration = 0
 lowest_loss = 10
 
 # 得到训练和测试的数据
@@ -53,8 +49,6 @@ for i in range(data.get_step()):
     # X_train: shape:(batch, sen_len, embedding) eg.(16, 901, 20)
     # y_train: shape:(batch, 语音文字最大长度) eg.(16, 39)
     x_train, y_train = data.next_train_batch()
-    # 读取数据; shape:(batch, sen_len, embedding)
-    x_test, y_test = data.next_validation_batch()
     # batch_size eg.(16)
     batch_len = y_train.shape[0]
     # seq_len中的最后一行 标记当前seq_len中非零的长度（真实的seq_len） # 转换为int
@@ -96,8 +90,8 @@ for i in range(data.get_step()):
     loss.backward()
     # adjust parameters using Adam
     optimizer.step()
-    print(loss)
 
+    print(loss)
     if loss < lowest_loss:
         lowest_loss = loss
         model.save_model(network, MODEL_PATH, overwrite=True)

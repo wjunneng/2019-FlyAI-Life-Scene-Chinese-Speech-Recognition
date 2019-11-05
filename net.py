@@ -20,7 +20,7 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_seqs, input_lengths, hidden=None):
-        # src = [sentence_len, batch_size]
+        # input_seqs = [sentence_len, batch_size, emb_dim]
         embedded = self.dropout(input_seqs)
         # embedded = [sentence_len, batch_size, emb_dim]
         packed = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_lengths)
