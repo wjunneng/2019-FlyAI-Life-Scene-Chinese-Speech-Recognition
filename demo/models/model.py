@@ -13,8 +13,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Model(object):
-    def __init__(self, dataset):
-        self.dataset = dataset
+    def __init__(self):
+        pass
 
     def predict(self, path, name=Configuration.Torch_MODEL_NAME, **data):
         """
@@ -104,3 +104,13 @@ class Model(object):
             start_id = i * batch_size
             end_id = min((i + 1) * batch_size, data_len)
             yield x_shuffle[start_id:end_id], y_shuffle[start_id:end_id]
+
+    def save_model(self, network, path, name=Configuration.Torch_MODEL_NAME):
+        """
+        保存模型
+        :param network:
+        :param path:
+        :param name:
+        :return:
+        """
+        torch.save(network, os.path.join(path, name))

@@ -100,14 +100,13 @@ class Processor(object):
         :param batch_size:
         :return:
         """
+        # 计算batch数目
         batch_num = len(input_data) // batch_size
+        # 遍历
         for k in range(batch_num):
             begin = k * batch_size
             end = begin + batch_size
             input_batch = input_data[begin:end]
             label_batch = label_data[begin:end]
-            max_len = max([len(line) for line in input_batch])
-            input_batch = np.array([line + [0] * (max_len - len(line)) for line in input_batch])
-            label_batch = np.array([line + [0] * (max_len - len(line)) for line in label_batch])
 
-            yield input_batch, label_batch
+            yield np.array(input_batch), np.array(label_batch)
