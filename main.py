@@ -4,10 +4,12 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 import os
+
 from net import Decoder, Encoder, Net
 from path import MODEL_PATH, LOG_PATH
 from flyai.dataset import Dataset
 from model import Model
+from configuration.configuration import Configuration
 
 # 超参
 parser = argparse.ArgumentParser()
@@ -29,11 +31,14 @@ os.makedirs(LOG_PATH, exist_ok=True)
 # 数据获取辅助类
 data = Dataset(epochs=args.EPOCHS, batch=args.BATCH, val_batch=args.BATCH)
 # (embedding_dim, hidden_dim) eg.(20, 64)
-en = Encoder(20, 64)
+en = Encoder(Configuration.embedding_dim, Configuration.hidden_dim)
 # (output_dim, embedding_dim, hidden_dim) eg.(3507, 20, 64)
-de = Decoder(3507, 20, 64)
+de = Decoder(Configuration.output_dim, Configuration.embedding_dim, Configuration.hidden_dim)
+# 定义网络
 network = Net(en, de, device)
+# 损失函数
 loss_fn = nn.CrossEntropyLoss()
+# 优化器
 optimizer = Adam(network.parameters())
 model = Model(data)
 iteration = 0

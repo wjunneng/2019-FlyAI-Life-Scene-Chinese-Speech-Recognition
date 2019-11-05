@@ -2,6 +2,7 @@
 
 2019 FlyAi 生活场景汉语语音识别
 
+![](images/rule_0.png)
 
 ### CommonVoiceChineseASR01_FlyAI
 
