@@ -41,20 +41,19 @@ def main():
         X.append(pro.input_x(audio_path=audio_path[index]))
         y.append(pro.input_y(label=label[index]))
 
-    batch = pro.get_batch(X, y, args.BATCH)
-
     # 定义网络
     encoder = Encoder(embedding_dim=Configuration.embedding_dim, hidden_dim=Configuration.hidden_dim)
     decoder = Decoder(output_dim=Configuration.output_dim, embedding_dim=Configuration.embedding_dim,
                       hidden_dim=Configuration.hidden_dim)
     network = Net(encoder=encoder, decoder=decoder, device=device)
     loss_function = nn.CrossEntropyLoss()
-    optimizer = Adam(network.parameters())
+    optimizer = Adam(network.parameters(), lr=0.001)
     model = Model()
 
     count = 0
     loss_min_value = 1e10
-    while True:
+    for epoch in range(50):
+        batch = pro.get_batch(X, y, args.BATCH)
         try:
             # x_train: (batch_size, audio_en_size, emb_size) .eg(4, 901,20)
             # y_train: (batch_size, audio_cn_size) .eg(4, 39)
@@ -101,13 +100,14 @@ def main():
             if loss < loss_min_value:
                 loss_min_value = loss
                 print('loss: %f' % loss)
-                model.save_model(network=network, path=Configuration.MODEL_PATH, name=Configuration.Torch_MODEL_NAME)
+                model.save_model(network=network, path=Configuration.MODEL_PATH,
+                                 name=Configuration.Torch_MODEL_NAME)
                 print("step %d, best lowest_loss %g" % (count, loss_min_value))
             print(str(count))
 
             count += 1
         except Exception as StopIteration:
-            break
+            continue
     print(count)
 
 

@@ -147,14 +147,28 @@ class Net(nn.Module):
         batch_size = src_seqs.shape[1]
         # 词汇大小 eg.(3507)
         trg_vocab_size = self.decoder.output_dim
-        # outputs:(max_trg_len, batch_size, trg_vocab_size) eg.(38, 1, )
+        # outputs:(max_trg_len, batch_size, trg_vocab_size) eg.(38, 1, 3507)
         outputs = torch.zeros(max_trg_len, batch_size, trg_vocab_size).to(self.device)
+        # encoder_outputs:(audio_en_size, batch_size, hidden_size) eg.(900, 1, 64)
+        # hidden:(2, batch_size, hidden_size) eg.(2, 1, 64)
         encoder_outputs, hidden = self.encoder(src_seqs, src_lengths)
-        output = torch.LongTensor([start_ix] * batch_size).to(self.device)
+        # output:(1) eg.(1)
+        output = torch.from_numpy(np.array([start_ix] * batch_size)).long().to(self.device)
+        # attn_weights:(max_trg_len, batch_size, audio_en_size) eg.(38, 1, 900)
         attn_weights = torch.zeros((max_trg_len, batch_size, max_src_len))
+        # max_trg_len:38
         for t in range(1, max_trg_len):
-            output, hidden, attn_weight = self.decoder(output, hidden, encoder_outputs)
+            # output:(1, trg_vocab_size) eg.(1, 3507)
+            # hidden:(2, batch_size, hidden_size) eg.(2, 1, 64)
+            # attn_weight:(batch_size, audio_en_size) eg.(1, 900)
+            output, hidden, attn_weight = self.decoder(input=output, hidden=hidden, encoder_outputs=encoder_outputs)
+            # 保存output
             outputs[t] = output
+            # 更换output
             output = output.max(1)[1]
+            # 保存attn_weight
+            # attn_weights[t] = attn_weight
+
+            print(output)
 
         return outputs, attn_weights

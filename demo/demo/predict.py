@@ -25,6 +25,7 @@ def predict(data_paths):
 
 
 if __name__ == '__main__':
+    # 以下列出列夫 托尔斯泰所着小说 战争与和平 中的人物 括号给出其首次出现章节
     datas = [{
         'audio_path': "/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition"
                       "/data/input/wav/common_voice_zh-CN_18531674.wav"}]

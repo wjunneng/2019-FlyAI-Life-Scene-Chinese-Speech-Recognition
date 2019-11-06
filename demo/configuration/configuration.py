@@ -3,9 +3,9 @@ import os, sys
 
 class Configuration(object):
     # 音频序列最大长度
-    max_audio_len = 900
+    max_audio_len = 1000
     # 音频对应的中文序列最大长度
-    max_tgt_len = 38
+    max_tgt_len = 50
     # 嵌入的维度
     embedding_dim = 20
     # 隐藏层维度
