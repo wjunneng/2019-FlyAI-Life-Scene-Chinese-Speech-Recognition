@@ -3,6 +3,7 @@ import numpy
 import os
 import torch
 
+from demo.utils import processor
 from demo.configuration.configuration import Configuration
 
 # 动态加载类和函数.
@@ -62,21 +63,26 @@ class Model(object):
         network = network.to(device)
         network.eval()
 
+        pro = processor.Processor()
+
         prediction = []
-        for data in datas:
-            # x_data shape: (batch,sen_len,embedding)
-            x_data = self.dataset.predict_data(**data)
+        # x_data shape: (batch, sen_len, embedding)
+        for x_data in datas:
             # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
-            length = [int(x_data[0, -1, 0])]
+            length = [int(x_data[-1, 0])]
+
             # 除去长度信息
-            x_data = x_data[:, :-1, :]
-            x_data = torch.from_numpy(x_data)
-            x_data = x_data.permute(1, 0, 2)
-            x_data = x_data.float().to(device)
+            x_data = x_data[:-1, :]
+
+            # 增加一个维度
+            x_data = torch.from_numpy(x_data).resize_([1, x_data.shape[0], x_data.shape[1]])
+
+            # 更换维度信息
+            x_data = x_data.permute(1, 0, 2).float().to(device)
 
             outputs, _ = network.predict(src_seqs=x_data, src_lengths=length, max_trg_len=Configuration.max_tgt_len)
             outputs = outputs.squeeze(1).cpu().detach().numpy()
-            output_words = self.dataset.to_categorys(outputs)
+            output_words = pro.output_y(data=outputs)
 
             report = ''
             for i in output_words:
@@ -113,4 +119,4 @@ class Model(object):
         :param name:
         :return:
         """
-        torch.save(network, os.path.join(path, name))
+        torch.save(obj=network, f=os.path.join(path, name))

@@ -156,4 +156,5 @@ class Net(nn.Module):
             output, hidden, attn_weight = self.decoder(output, hidden, encoder_outputs)
             outputs[t] = output
             output = output.max(1)[1]
+
         return outputs, attn_weights
