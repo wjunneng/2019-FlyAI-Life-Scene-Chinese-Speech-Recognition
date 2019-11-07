@@ -25,3 +25,12 @@ class Configuration(object):
     WORDS_PATH = os.path.join(DATA_PATH, 'words.json')
     # dev.csv路径
     DEV_PATH = os.path.join(DATA_PATH, 'dev.csv')
+
+    # mfcc 特征
+    sample_rate = 16000
+    window_size = 0.025
+    window_stride = 0.01
+    n_fft = int(sample_rate * window_size)
+    win_length = n_fft
+    hop_length = int(sample_rate * window_stride)
+    window = "hamming"

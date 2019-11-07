@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*
+import os
 import json
 import numpy as np
-import librosa
-import os
 
+from demo.utils import features
 from demo.configuration.configuration import Configuration
 
 
@@ -31,32 +31,9 @@ class Processor(object):
         :param audio_path: wav路径
         :return:
         """
-        # mfcc 梅尔倒谱系数
-        mfcc = None
-        try:
-            wav, sr = librosa.load(os.path.join(Configuration.DATA_PATH, audio_path), mono=True)
-            mfcc = librosa.feature.mfcc(wav, sr, hop_length=int(0.010 * sr), n_fft=int(0.025 * sr))
-            mfcc = mfcc.transpose((1, 0))
-        except Exception as e:
-            print('mfcc error %s' % e)
+        wav_features = features.Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_2()
 
-        try:
-            if len(mfcc) >= self.max_audio_len:
-                mfcc = mfcc[:self.max_audio_len]
-                origanal_len = self.max_audio_len
-            else:
-                origanal_len = len(mfcc)
-                mfcc = np.concatenate(
-                    (mfcc, np.zeros([self.max_audio_len - origanal_len, Configuration.embedding_dim])), 0)
-
-            # 最后一行元素为句子实际长度
-            mfcc = np.concatenate(
-                (mfcc, np.array([origanal_len for _ in range(Configuration.embedding_dim)]).reshape(
-                    [1, Configuration.embedding_dim])))
-        except Exception as e:
-            print('conc error %s' % e)
-
-        return mfcc
+        return wav_features
 
     def input_y(self, label):
         """
