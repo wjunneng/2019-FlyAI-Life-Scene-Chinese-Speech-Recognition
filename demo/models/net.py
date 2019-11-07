@@ -169,6 +169,4 @@ class Net(nn.Module):
             # 保存attn_weight
             # attn_weights[t] = attn_weight
 
-            print(output)
-
         return outputs, attn_weights

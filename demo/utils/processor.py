@@ -31,7 +31,10 @@ class Processor(object):
         :param audio_path: wav路径
         :return:
         """
-        wav_features = features.Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_2()
+        # 方法一
+        wav_features = features.Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_1()
+        # 方法二
+        # wav_features = features.Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_2()
 
         return wav_features
 

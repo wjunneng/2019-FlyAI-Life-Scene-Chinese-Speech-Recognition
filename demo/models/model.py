@@ -58,16 +58,16 @@ class Model(object):
         :return:
         """
         print('模型路径: %s' % os.path.join(Configuration.MODEL_PATH, Configuration.Torch_MODEL_NAME))
-        # 加载网络
-        network = torch.load(os.path.join(Configuration.MODEL_PATH, Configuration.Torch_MODEL_NAME))
-        network = network.to(device)
-        network.eval()
-
         pro = processor.Processor()
 
         prediction = []
         # x_data shape: (batch, sen_len, embedding)
         for x_data in datas:
+            # 加载网络
+            network = torch.load(os.path.join(Configuration.MODEL_PATH, Configuration.Torch_MODEL_NAME))
+            network = network.to(device)
+            network.eval()
+
             # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
             length = [int(x_data[-1, 0])]
 
