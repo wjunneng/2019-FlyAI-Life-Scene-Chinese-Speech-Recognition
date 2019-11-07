@@ -2,9 +2,10 @@
 """
 实现模型的预测
 """
+import numpy as np
+
 from demo.models import model
 from demo.utils import processor
-import numpy as np
 
 
 def predict(data_paths):
@@ -25,7 +26,6 @@ def predict(data_paths):
 
 
 if __name__ == '__main__':
-
     datas = [
         # 以下列出列夫 托尔斯泰所着小说 战争与和平 中的人物 括号给出其首次出现章节
         {'audio_path': "/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/data/input/"

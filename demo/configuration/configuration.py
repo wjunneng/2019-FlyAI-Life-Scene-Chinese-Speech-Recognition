@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 
 class Configuration(object):
@@ -11,7 +12,7 @@ class Configuration(object):
     # 隐藏层维度
     hidden_dim = 128
     # 输出的维度
-    output_dim = 3507
+    output_dim = 3506
 
     # 模型名称
     Torch_MODEL_NAME = "model.pkl"

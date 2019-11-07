@@ -3,13 +3,11 @@ import json
 import numpy as np
 import librosa
 
+from features import Features
 from flyai.processor.download import check_download
 from flyai.processor.base import Base
 from path import DATA_PATH, WORDS_PATH
 from configuration.configuration import Configuration
-
-# 汉明窗
-w = 0.54 - 0.46 * np.cos(2 * np.pi * np.linspace(0, 400 - 1, 400, dtype=np.int64) / (400 - 1))
 
 
 class Processor(Base):
@@ -36,33 +34,17 @@ class Processor(Base):
         :param audio_path: wav路径
         :return:
         """
-        # mfcc 梅尔倒谱系数
-        mfcc = None
+        wav_features = None
         try:
             path = check_download(audio_path, DATA_PATH)
-            wav, sr = librosa.load(path, mono=True)
-            mfcc = librosa.feature.mfcc(wav, sr, hop_length=int(0.010 * sr), n_fft=int(0.025 * sr))
-            mfcc = mfcc.transpose((1, 0))
+            # 方法一
+            wav_features = Features(path).method_1()
+            # 方法二
+            # wav_features = Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_2()
         except Exception as e:
-            print('mfcc error %s' % e)
+            print('error %s' % e)
 
-        try:
-            if len(mfcc) >= self.max_audio_len:
-                mfcc = mfcc[:self.max_audio_len]
-                origanal_len = self.max_audio_len
-            else:
-                origanal_len = len(mfcc)
-                mfcc = np.concatenate(
-                    (mfcc, np.zeros([self.max_audio_len - origanal_len, Configuration.embedding_dim])), 0)
-
-            # 最后一行元素为句子实际长度
-            mfcc = np.concatenate(
-                (mfcc, np.array([origanal_len for _ in range(Configuration.embedding_dim)]).reshape(
-                    [1, Configuration.embedding_dim])))
-        except Exception as e:
-            print('conc error %s' % e)
-
-        return mfcc
+        return wav_features
 
     def input_y(self, label):
         """
@@ -97,3 +79,22 @@ class Processor(Base):
         output_words = [self.char_dict_res[np.argmax(word_prob)] for word_prob in data]
 
         return output_words
+
+    def get_batch(self, input_data, label_data, batch_size):
+        """
+        获取batch数据
+        :param input_data:
+        :param label_data:
+        :param batch_size:
+        :return:
+        """
+        # 计算batch数目
+        batch_num = len(input_data) // batch_size
+        # 遍历
+        for k in range(batch_num):
+            begin = k * batch_size
+            end = begin + batch_size
+            input_batch = input_data[begin:end]
+            label_batch = label_data[begin:end]
+
+            yield np.array(input_batch), np.array(label_batch)

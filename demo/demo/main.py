@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*
 import argparse
 import torch
-from demo.utils import processor
+
 import pandas as pd
 import os
 from torch.optim import Adam
@@ -9,6 +9,7 @@ from torch import nn
 
 from demo.models.net import Decoder, Encoder, Net
 from demo.models.model import Model
+from demo.utils import processor
 from demo.configuration.configuration import Configuration
 
 
@@ -52,7 +53,7 @@ def main():
 
     count = 0
     loss_min_value = 1e10
-    for epoch in range(50):
+    for epoch in range(100):
         batch = pro.get_batch(X, y, args.BATCH)
         while True:
             try:

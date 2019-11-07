@@ -2,7 +2,7 @@ import numpy as np
 import wave
 import librosa
 
-from demo.configuration.configuration import Configuration
+from configuration.configuration import Configuration
 
 
 class Features(object):
