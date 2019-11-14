@@ -1,0 +1,68 @@
+# ########################## Low Frame Rate
+# Low Frame Rate: number of frames to stack
+LFR_m: 4
+# Low Frame Rate: number of frames to skip
+LFR_n: 3
+
+# ########################## encoder
+# Dim of encoder input (before LFR)
+d_input: 80
+# Number of encoder stacks
+n_layers_enc: 6
+# Number of Multi Head Attention (MHA)
+n_head: 8
+# Dimension of key
+d_k: 64
+# Dimension of value
+d_v: 64
+# Dimension of model
+d_model: 512
+# Dimension of inner
+d_inner: 2048
+# Dropout rate
+dropout: 0.1
+# Positional Encoding max len
+pe_maxlen: 5000
+
+# ########################### decoder
+# Dim of decoder embedding
+d_word_vec: 512
+# Number of decoder stacks
+n_layers_dec: 6
+# share decoder embedding with decoder projection
+tgt_emb_prj_weight_sharing: 1
+
+# ########################### loss
+# label smoothing
+label_smoothing: 0.1
+
+# ############################ training config
+# number of maximum epochs
+epochs: 10
+
+# ############################ minbatch
+# reshuffle the data at every epoch
+shuffle: 1
+# Batch size
+batch_size: 8
+# Batch frames. If this is not 0, batch size will make no sense
+batch_frames: 0
+# Batch size is reduced if the input sequence length > ML
+maxlen_in: 800
+# Batch size is reduced if the output sequence length > ML
+maxlen_out: 150
+# Number of workers to generate minibatch
+num_workers: 8
+
+# ############################ optimizer
+# tunable scalar multiply to learning rate
+k: 0.2
+# Init learning rate
+lr: 0.001
+# warmup steps
+warmup_steps: 4000
+
+
+# ############################ other
+# checkpoint
+checkpoint: 'None'

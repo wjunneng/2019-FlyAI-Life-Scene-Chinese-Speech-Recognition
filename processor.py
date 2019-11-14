@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*
 import json
 import numpy as np
+import os
 import librosa
 
 from features import Features
 from flyai.processor.download import check_download
 from flyai.processor.base import Base
 from path import DATA_PATH, WORDS_PATH
-from configuration.configuration import Configuration
+from configuration.constant import Constant
 
 
 class Processor(Base):
     def __init__(self):
-        self.max_audio_len = Configuration.max_audio_len
-        self.max_tgt_len = Configuration.max_tgt_len
+        self.type = 'seq2seq'
+        self.configuration = Constant(type=self.type).get_configuration()
+        self.max_audio_len = self.configuration.max_audio_len
+        self.max_tgt_len = self.configuration.max_tgt_len
         self.char_dict = dict()
         self.char_dict_res = dict()
 
@@ -29,18 +32,18 @@ class Processor(Base):
 
     def input_x(self, audio_path):
         """
-        参数为csv中作为输入x的一条数据，该方法会被Dataset多次调用
-        【该参数需要与app.yaml的Model的input-->columns->name 一一对应】
-        :param audio_path: wav路径
-        :return:
+            参数为csv中作为输入x的一条数据，该方法会被Dataset多次调用
+            【该参数需要与app.yaml的Model的input-->columns->name 一一对应】
+            :param audio_path: wav路径
+            :return:
         """
         wav_features = None
         try:
             path = check_download(audio_path, DATA_PATH)
             # 方法一
-            wav_features = Features(path).method_1()
+            wav_features = Features(wav_path=path, type=self.type).method_1()
             # 方法二
-            # wav_features = Features(os.path.join(Configuration.DATA_PATH, audio_path)).method_2()
+            # wav_features = Features(wav_path=os.path.join(path.DATA_PATH, audio_path), type=self.type).method_2()
         except Exception as e:
             print('error %s' % e)
 
@@ -48,10 +51,10 @@ class Processor(Base):
 
     def input_y(self, label):
         """
-        获取中文序列的索引及长度
-        【该参数需要与app.yaml的Model的input-->columns->name 一一对应】
-        :param label:
-        :return:
+            获取中文序列的索引及长度
+            【该参数需要与app.yaml的Model的input-->columns->name 一一对应】
+            :param label:
+            :return:
         """
         print('label: %s' % label)
         # 获取单词索引
@@ -72,9 +75,9 @@ class Processor(Base):
 
     def output_y(self, data):
         """
-        验证时使用，把模型输出的y转为对应的结果
-        :param data:
-        :return:
+            验证时使用，把模型输出的y转为对应的结果
+            :param data:
+            :return:
         """
         output_words = [self.char_dict_res[np.argmax(word_prob)] for word_prob in data]
 
@@ -82,11 +85,11 @@ class Processor(Base):
 
     def get_batch(self, input_data, label_data, batch_size):
         """
-        获取batch数据
-        :param input_data:
-        :param label_data:
-        :param batch_size:
-        :return:
+            获取batch数据
+            :param input_data:
+            :param label_data:
+            :param batch_size:
+            :return:
         """
         # 计算batch数目
         batch_num = len(input_data) // batch_size
