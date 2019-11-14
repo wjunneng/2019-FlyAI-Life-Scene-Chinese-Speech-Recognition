@@ -59,6 +59,7 @@ class Processor(Base):
         # 获取单词索引
         word_list = [self.char_dict.get(word) for word in label if self.char_dict.get(word) is not None]
 
+        """
         origanal_len = len(word_list)
         if len(word_list) >= self.max_tgt_len:
             origanal_len = self.max_tgt_len
@@ -69,6 +70,7 @@ class Processor(Base):
                 word_list.append(0)
         # 最后一个元素为句子长度x
         word_list.append(origanal_len)
+        """
 
         return word_list
 
