@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*
 import json
 import numpy as np
-import os
-import librosa
 
-from features import Features
+from utils.features import Features
 from flyai.processor.download import check_download
 from flyai.processor.base import Base
 from path import DATA_PATH, WORDS_PATH
-from configuration.constant import Constant
+from configurations.constant import Constant
 
 
 class Processor(Base):

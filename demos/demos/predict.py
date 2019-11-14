@@ -4,8 +4,8 @@
 """
 import numpy as np
 
-from demo.models import model
-from demo.utils import processor
+from demos.models import model
+from demos.utils import processor
 
 
 def predict(data_paths):

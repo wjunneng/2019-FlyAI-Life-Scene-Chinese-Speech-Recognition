@@ -3,7 +3,7 @@ import numpy
 import os
 import torch
 
-from configuration.configuration import Configuration
+from configurations.configuration import Configuration
 from flyai.model.base import Base
 from path import MODEL_PATH
 

@@ -66,3 +66,18 @@ warmup_steps: 4000
 # ############################ other
 # checkpoint
 checkpoint: 'None'
+# print_preq
+print_preq: 50
+# 词汇大小
+vocab_size: 3507
+# token
+PAD: 0
+UNK: 1
+SOS: 2
+EOS: 3
+SPACE: 4
+PAD_FLAG: '<pad>'
+UNK_FLAG: '<unk>'
+SOS_FLAG: '<sos>'
+EOS_FLAG: '<eos>'
+SPACE_FLAG: '<space>'

@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*
-import argparse
+import os
+import tqdm
 import torch
+import argparse
+import numpy as np
 import torch.nn as nn
 from torch.optim import Adam
-import os
+from torch.utils.data.dataloader import default_collate
 
-from net import Decoder, Encoder, Net
-from path import MODEL_PATH, LOG_PATH
-from flyai.dataset import Dataset
+from utils.util import AverageMeter, Util, AiShellDataset
 from model import Model
-from configuration.constant import Constant
+from flyai.dataset import Dataset
+from path import MODEL_PATH, LOG_PATH
+import net
+import net_1
+from configurations.constant import Constant
 
 
 class Seq2seq(object):
@@ -39,10 +44,10 @@ class Seq2seq(object):
         data = Dataset(epochs=args.EPOCHS, batch=args.BATCH, val_batch=args.BATCH)
 
         # 定义网络
-        encoder = Encoder(embedding_dim=self.embedding_dim, hidden_dim=self.hidden_dim)
-        decoder = Decoder(output_dim=self.output_dim, embedding_dim=self.embedding_dim,
-                          hidden_dim=self.hidden_dim)
-        network = Net(encoder=encoder, decoder=decoder, device=device)
+        encoder = net.Encoder(embedding_dim=self.embedding_dim, hidden_dim=self.hidden_dim)
+        decoder = net.Decoder(output_dim=self.output_dim, embedding_dim=self.embedding_dim,
+                              hidden_dim=self.hidden_dim)
+        network = net.Net(encoder=encoder, decoder=decoder, device=device)
         loss_function = nn.CrossEntropyLoss()
         optimizer = Adam(network.parameters(), lr=0.001)
         model = Model(data)
@@ -106,10 +111,217 @@ class Seq2seq(object):
 
 class Tramsformer(object):
     def __init__(self):
-        configuration = Constant(type='tramsformer').get_configuration()
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    def main(self):
-        pass
+        configuration = Constant(type='tramsformer').get_configuration()
+        self.label_smoothing = configuration.label_smoothing
+        self.print_freq = configuration.print_freq
+        self.vocab_size = configuration.vocab_size
+
+        self.LFR_m = configuration.LFR_m
+        self.LFR_n = configuration.LFR_n
+        self.d_input = configuration.d_input
+        self.n_layers_enc = configuration.n_layers_enc
+        self.n_head = configuration.n_head
+        self.d_k = configuration.d_k
+        self.d_v = configuration.d_v
+        self.d_model = configuration.d_model
+        self.d_inner = configuration.d_inner
+        self.dropout = configuration.dropout
+        self.pe_maxlen = configuration.pe_maxlen
+        self.d_word_vec = configuration.d_word_vec
+        self.n_layers_dec = configuration.n_layers_dec
+        self.tgt_emb_prj_weight_sharing = configuration.tgt_emb_prj_weight_sharing
+        self.label_smoothing = configuration.label_smoothing
+        self.epochs = configuration.epochs
+        self.shuffle = configuration.shuffle
+        self.batch_size = configuration.batch_size
+        self.batch_frames = configuration.batch_frames
+        self.maxlen_in = configuration.maxlen_in
+        self.maxlen_out = configuration.maxlen_out
+        self.num_workers = configuration.num_workers
+        self.k = configuration.k
+        self.lr = configuration.lr
+        self.warmup_steps = configuration.warmup_steps
+        self.pad_id = configuration.PAD
+        self.sos_id = configuration.SOS
+        self.eos_id = configuration.EOS
+
+    def pad_collate(self, batch):
+        max_input_len = float('-inf')
+        max_target_len = float('-inf')
+
+        for elem in batch:
+            feature, trn = elem
+            max_input_len = max_input_len if max_input_len > feature.shape[0] else feature.shape[0]
+            max_target_len = max_target_len if max_target_len > len(trn) else len(trn)
+
+        for i, elem in enumerate(batch):
+            feature, trn = elem
+            input_length = feature.shape[0]
+            input_dim = feature.shape[1]
+            padded_input = np.zeros((max_input_len, input_dim), dtype=np.float32)
+            padded_input[:input_length, :] = feature
+            padded_target = np.pad(trn, (0, max_target_len - len(trn)), 'constant', constant_values=self.pad_id)
+            batch[i] = (padded_input, padded_target, input_length)
+
+        # sort it by input lengths (long to short)
+        batch.sort(key=lambda x: x[2], reverse=True)
+
+        return default_collate(batch)
+
+    def main(self, args):
+        torch.manual_seed(7)
+        np.random.seed(7)
+        checkpoint = args.checkpoint
+        start_epoch = 0
+        best_loss = float('inf')
+        epochs_since_improvement = 0
+
+        # Initialize / load checkpoint
+        if checkpoint is None:
+            # model
+            encoder = net_1.Encoder(d_input=self.d_input * self.LFR_m,
+                                    n_layers=self.n_layers_enc,
+                                    n_head=self.n_head,
+                                    d_k=self.d_k,
+                                    d_v=self.d_v,
+                                    d_model=self.d_model,
+                                    d_inner=self.d_inner,
+                                    dropout=self.dropout,
+                                    pe_maxlen=self.pe_maxlen)
+            decoder = net_1.Decoder(pad_id=self.pad_id,
+                                    sos_id=self.sos_id,
+                                    eos_id=self.eos_id,
+                                    n_tgt_vocab=self.vocab_size,
+                                    d_word_vec=self.d_word_vec,
+                                    n_layers=self.n_layers_dec,
+                                    n_head=self.n_head,
+                                    d_k=self.d_k,
+                                    d_v=self.d_v,
+                                    d_model=self.d_model,
+                                    d_inner=self.d_inner,
+                                    dropout=self.dropout,
+                                    tgt_emb_prj_weight_sharing=self.tgt_emb_prj_weight_sharing,
+                                    pe_maxlen=self.pe_maxlen)
+            model = net_1.Transformer(encoder, decoder)
+            # print(model)
+            # model = nn.DataParallel(model)
+
+            # optimizer
+            optimizer = net_1.TransformerOptimizer(
+                torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09))
+
+        else:
+            checkpoint = torch.load(checkpoint)
+            start_epoch = checkpoint['epoch'] + 1
+            epochs_since_improvement = checkpoint['epochs_since_improvement']
+            model = checkpoint['model']
+            optimizer = checkpoint['optimizer']
+
+        logger = Util.get_logger()
+
+        # Move to GPU, if available
+        model = model.to(self.device)
+
+        # Custom dataloaders
+        train_dataset = AiShellDataset(args=args, split='train', pickle_file=None)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=self.pad_collate,
+                                                   pin_memory=True, shuffle=True, num_workers=args.num_workers)
+        valid_dataset = AiShellDataset(args=args, split='dev', pickle_file=None)
+        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=self.pad_collate,
+                                                   pin_memory=True, shuffle=False, num_workers=args.num_workers)
+
+        # Epochs
+        for epoch in range(start_epoch, args.epochs):
+            # One epoch's training
+            train_loss = self.train(train_loader=train_loader,
+                                    model=model,
+                                    optimizer=optimizer,
+                                    epoch=epoch,
+                                    logger=logger)
+
+            lr = optimizer.lr
+            print('\nLearning rate: {}'.format(lr))
+            step_num = optimizer.step_num
+            print('Step num: {}\n'.format(step_num))
+
+            # One epoch's validation
+            valid_loss = self.valid(valid_loader=valid_loader,
+                                    model=model,
+                                    logger=logger)
+
+            # Check if there was an improvement
+            is_best = valid_loss < best_loss
+            best_loss = min(valid_loss, best_loss)
+            if not is_best:
+                epochs_since_improvement += 1
+                print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            else:
+                epochs_since_improvement = 0
+
+            # Save checkpoint
+            Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
+
+    def train(self, train_loader, model, optimizer, epoch, logger):
+        model.train()  # train mode (dropout and batchnorm is used)
+
+        losses = AverageMeter()
+
+        # Batches
+        for i, (data) in enumerate(train_loader):
+            # Move to GPU, if available
+            padded_input, padded_target, input_lengths = data
+            padded_input = padded_input.to(self.device)
+            padded_target = padded_target.to(self.device)
+            input_lengths = input_lengths.to(self.device)
+
+            # Forward prop.
+            pred, gold = model(padded_input, input_lengths, padded_target)
+            loss, n_correct = net_1.Util.cal_performance(pred, gold, smoothing=self.label_smoothing)
+
+            # Back prop.
+            optimizer.zero_grad()
+            loss.backward()
+
+            # Update weights
+            optimizer.step()
+
+            # Keep track of metrics
+            losses.update(loss.item())
+
+            # Print status
+            if i % self.print_freq == 0:
+                logger.info('Epoch: [{0}][{1}/{2}]\t'
+                            'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(epoch, i, len(train_loader), loss=losses))
+
+        return losses.avg
+
+    def valid(self, valid_loader, model, logger):
+        model.eval()
+
+        losses = AverageMeter()
+
+        # Batches
+        for data in tqdm(valid_loader):
+            # Move to GPU, if available
+            padded_input, padded_target, input_lengths = data
+            padded_input = padded_input.to(self.device)
+            padded_target = padded_target.to(self.device)
+            input_lengths = input_lengths.to(self.device)
+
+            with torch.no_grad():
+                # Forward prop.
+                pred, gold = model(padded_input, input_lengths, padded_target)
+                loss, n_correct = net_1.Util.cal_performance(pred, gold, smoothing=self.label_smoothing)
+
+            # Keep track of metrics
+            losses.update(loss.item())
+
+        # Print status
+        logger.info('\nValidation Loss {loss.val:.5f} ({loss.avg:.5f})\n'.format(loss=losses))
+
+        return losses.avg
 
 
 if __name__ == '__main__':

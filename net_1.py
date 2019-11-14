@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*
 import numpy as np
 import math
 import torch
@@ -5,121 +6,123 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def pad_list(xs, pad_value):
-    """
-    :param xs:
-    :param pad_value:
-    :return:
-    """
-    # From: espnet/src/nets/e2e_asr_th.py: pad_list()
-    n_batch = len(xs)
-    max_len = max(x.size(0) for x in xs)
-    pad = xs[0].new(n_batch, max_len, *xs[0].size()[1:]).fill_(pad_value)
-    for i in range(n_batch):
-        pad[i, :xs[i].size(0)] = xs[i]
-    return pad
+class Util(object):
+    @staticmethod
+    def pad_list(xs, pad_value):
+        """
+        :param xs:
+        :param pad_value:
+        :return:
+        """
+        # From: espnet/src/nets/e2e_asr_th.py: pad_list()
+        n_batch = len(xs)
+        max_len = max(x.size(0) for x in xs)
+        pad = xs[0].new(n_batch, max_len, *xs[0].size()[1:]).fill_(pad_value)
+        for i in range(n_batch):
+            pad[i, :xs[i].size(0)] = xs[i]
+        return pad
 
+    @staticmethod
+    def get_attn_key_pad_mask(seq_k, seq_q, pad_idx):
+        """
+            For masking out the padding part of key sequence.
+        """
+        # Expand to fit the shape of key query attention matrix.
+        len_q = seq_q.size(1)
+        padding_mask = seq_k.eq(pad_idx)
+        padding_mask = padding_mask.unsqueeze(1).expand(-1, len_q, -1)  # b x lq x lk
 
-def get_attn_key_pad_mask(seq_k, seq_q, pad_idx):
-    """
-        For masking out the padding part of key sequence.
-    """
-    # Expand to fit the shape of key query attention matrix.
-    len_q = seq_q.size(1)
-    padding_mask = seq_k.eq(pad_idx)
-    padding_mask = padding_mask.unsqueeze(1).expand(-1, len_q, -1)  # b x lq x lk
+        return padding_mask
 
-    return padding_mask
+    @staticmethod
+    def get_subsequent_mask(seq):
+        """
+            For masking out the subsequent info.
+        """
 
+        sz_b, len_s = seq.size()
+        subsequent_mask = torch.triu(torch.ones((len_s, len_s), device=seq.device, dtype=torch.uint8), diagonal=1)
+        subsequent_mask = subsequent_mask.unsqueeze(0).expand(sz_b, -1, -1)  # b x ls x ls
 
-def get_subsequent_mask(seq):
-    """
-        For masking out the subsequent info.
-    """
+        return subsequent_mask
 
-    sz_b, len_s = seq.size()
-    subsequent_mask = torch.triu(torch.ones((len_s, len_s), device=seq.device, dtype=torch.uint8), diagonal=1)
-    subsequent_mask = subsequent_mask.unsqueeze(0).expand(sz_b, -1, -1)  # b x ls x ls
+    @staticmethod
+    def get_non_pad_mask(padded_input, input_lengths=None, pad_idx=None):
+        """
+            padding position is set to 0, either use input_lengths or pad_idx
+        """
+        assert input_lengths is not None or pad_idx is not None
+        if input_lengths is not None:
+            # padded_input: N x T x ..
+            N = padded_input.size(0)
+            non_pad_mask = padded_input.new_ones(padded_input.size()[:-1])  # N x T
+            for i in range(N):
+                non_pad_mask[i, input_lengths[i]:] = 0
+        if pad_idx is not None:
+            # padded_input: N x T
+            assert padded_input.dim() == 2
+            non_pad_mask = padded_input.ne(pad_idx).float()
+        # unsqueeze(-1) for broadcast
+        return non_pad_mask.unsqueeze(-1)
 
-    return subsequent_mask
+    @staticmethod
+    def get_attn_pad_mask(padded_input, input_lengths, expand_length):
+        """
+            mask position is set to 1
+        """
+        # N x Ti x 1
+        non_pad_mask = Util.get_non_pad_mask(padded_input, input_lengths=input_lengths)
+        # N x Ti, lt(1) like not operation
+        pad_mask = non_pad_mask.squeeze(-1).lt(1)
+        attn_mask = pad_mask.unsqueeze(1).expand(-1, expand_length, -1)
+        return attn_mask
 
+    @staticmethod
+    def cal_performance(pad_id, pred, gold, smoothing=0.0):
+        """Calculate cross entropy loss, apply label smoothing if needed.
+        Args:
+            pred: N x T x C, score before softmax
+            gold: N x T
+        """
 
-def get_non_pad_mask(padded_input, input_lengths=None, pad_idx=None):
-    """
-        padding position is set to 0, either use input_lengths or pad_idx
-    """
-    assert input_lengths is not None or pad_idx is not None
-    if input_lengths is not None:
-        # padded_input: N x T x ..
-        N = padded_input.size(0)
-        non_pad_mask = padded_input.new_ones(padded_input.size()[:-1])  # N x T
-        for i in range(N):
-            non_pad_mask[i, input_lengths[i]:] = 0
-    if pad_idx is not None:
-        # padded_input: N x T
-        assert padded_input.dim() == 2
-        non_pad_mask = padded_input.ne(pad_idx).float()
-    # unsqueeze(-1) for broadcast
-    return non_pad_mask.unsqueeze(-1)
+        pred = pred.view(-1, pred.size(2))
+        gold = gold.contiguous().view(-1)
 
+        loss = Util.cal_loss(pred, gold, smoothing)
 
-def get_attn_pad_mask(padded_input, input_lengths, expand_length):
-    """
-        mask position is set to 1
-    """
-    # N x Ti x 1
-    non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
-    # N x Ti, lt(1) like not operation
-    pad_mask = non_pad_mask.squeeze(-1).lt(1)
-    attn_mask = pad_mask.unsqueeze(1).expand(-1, expand_length, -1)
-    return attn_mask
-
-
-def cal_performance(pad_id, pred, gold, smoothing=0.0):
-    """Calculate cross entropy loss, apply label smoothing if needed.
-    Args:
-        pred: N x T x C, score before softmax
-        gold: N x T
-    """
-
-    pred = pred.view(-1, pred.size(2))
-    gold = gold.contiguous().view(-1)
-
-    loss = cal_loss(pred, gold, smoothing)
-
-    pred = pred.max(1)[1]
-    non_pad_mask = gold.ne(pad_id)
-    n_correct = pred.eq(gold)
-    n_correct = n_correct.masked_select(non_pad_mask).sum().item()
-
-    return loss, n_correct
-
-
-def cal_loss(pad_id, pred, gold, smoothing=0.0):
-    """
-        Calculate cross entropy loss, apply label smoothing if needed.
-    """
-
-    if smoothing > 0.0:
-        eps = smoothing
-        n_class = pred.size(1)
-
-        # Generate one-hot matrix: N x C.
-        # Only label position is 1 and all other positions are 0
-        # gold include -1 value (IGNORE_ID) and this will lead to assert error
-        gold_for_scatter = gold.ne(pad_id).long() * gold
-        one_hot = torch.zeros_like(pred).scatter(1, gold_for_scatter.view(-1, 1), 1)
-        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / n_class
-        log_prb = F.log_softmax(pred, dim=1)
-
+        pred = pred.max(1)[1]
         non_pad_mask = gold.ne(pad_id)
-        n_word = non_pad_mask.sum().item()
-        loss = -(one_hot * log_prb).sum(dim=1)
-        loss = loss.masked_select(non_pad_mask).sum() / n_word
-    else:
-        loss = F.cross_entropy(pred, gold, ignore_index=pad_id, reduction='elementwise_mean')
+        n_correct = pred.eq(gold)
+        n_correct = n_correct.masked_select(non_pad_mask).sum().item()
 
-    return loss
+        return loss, n_correct
+
+    @staticmethod
+    def cal_loss(pad_id, pred, gold, smoothing=0.0):
+        """
+            Calculate cross entropy loss, apply label smoothing if needed.
+        """
+
+        if smoothing > 0.0:
+            eps = smoothing
+            n_class = pred.size(1)
+
+            # Generate one-hot matrix: N x C.
+            # Only label position is 1 and all other positions are 0
+            # gold include -1 value (IGNORE_ID) and this will lead to assert error
+            gold_for_scatter = gold.ne(pad_id).long() * gold
+            one_hot = torch.zeros_like(pred).scatter(1, gold_for_scatter.view(-1, 1), 1)
+            one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / n_class
+            log_prb = F.log_softmax(pred, dim=1)
+
+            non_pad_mask = gold.ne(pad_id)
+            n_word = non_pad_mask.sum().item()
+            loss = -(one_hot * log_prb).sum(dim=1)
+            loss = loss.masked_select(non_pad_mask).sum() / n_word
+        else:
+            loss = F.cross_entropy(pred, gold, ignore_index=pad_id, reduction='elementwise_mean')
+
+        return loss
 
 
 class TransformerOptimizer(object):
@@ -292,8 +295,8 @@ class Decoder(nn.Module):
         ys_out = [torch.cat([y, eos], dim=0) for y in ys]
         # padding for ys with -1
         # pys: utt x olen
-        ys_in_pad = pad_list(ys_in, self.eos_id)
-        ys_out_pad = pad_list(ys_out, self.pad_id)
+        ys_in_pad = Util.pad_list(ys_in, self.eos_id)
+        ys_out_pad = Util.pad_list(ys_out, self.pad_id)
         assert ys_in_pad.size() == ys_out_pad.size()
         return ys_in_pad, ys_out_pad
 
@@ -311,18 +314,18 @@ class Decoder(nn.Module):
         ys_in_pad, ys_out_pad = self.preprocess(padded_input)
 
         # Prepare masks
-        non_pad_mask = get_non_pad_mask(ys_in_pad, pad_idx=self.eos_id)
+        non_pad_mask = Util.get_non_pad_mask(ys_in_pad, pad_idx=self.eos_id)
 
-        slf_attn_mask_keypad = get_attn_key_pad_mask(seq_k=ys_in_pad,
-                                                     seq_q=ys_in_pad,
-                                                     pad_idx=self.eos_id)
-        slf_attn_mask_subseq = get_subsequent_mask(ys_in_pad).type_as(slf_attn_mask_keypad)
+        slf_attn_mask_keypad = Util.get_attn_key_pad_mask(seq_k=ys_in_pad,
+                                                          seq_q=ys_in_pad,
+                                                          pad_idx=self.eos_id)
+        slf_attn_mask_subseq = Util.get_subsequent_mask(ys_in_pad).type_as(slf_attn_mask_keypad)
         slf_attn_mask = (slf_attn_mask_keypad + slf_attn_mask_subseq).gt(0)
 
         output_length = ys_in_pad.size(1)
-        dec_enc_attn_mask = get_attn_pad_mask(encoder_padded_outputs,
-                                              encoder_input_lengths,
-                                              output_length)
+        dec_enc_attn_mask = Util.get_attn_pad_mask(encoder_padded_outputs,
+                                                   encoder_input_lengths,
+                                                   output_length)
 
         # Forward
         dec_output = self.dropout(self.tgt_word_emb(ys_in_pad) * self.x_logit_scale +
@@ -390,7 +393,7 @@ class Decoder(nn.Module):
                 # print('freq: ' + str(freq))
                 # -- Prepare masks
                 non_pad_mask = torch.ones_like(ys).float().unsqueeze(-1)  # 1xix1
-                slf_attn_mask = get_subsequent_mask(ys)
+                slf_attn_mask = Util.get_subsequent_mask(ys)
 
                 # -- Forward
                 dec_output = self.dropout(
@@ -531,9 +534,9 @@ class Encoder(nn.Module):
         enc_slf_attn_list = []
 
         # Prepare masks
-        non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
+        non_pad_mask = Util.get_non_pad_mask(padded_input, input_lengths=input_lengths)
         length = padded_input.size(1)
-        slf_attn_mask = get_attn_pad_mask(padded_input, input_lengths, length)
+        slf_attn_mask = Util.get_attn_pad_mask(padded_input, input_lengths, length)
 
         # Forward
         enc_output = self.dropout(

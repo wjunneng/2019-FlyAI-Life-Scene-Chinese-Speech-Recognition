@@ -3,8 +3,8 @@ import os
 import json
 import numpy as np
 
-from demo.utils import features
-from demo.configuration.configuration import Configuration
+from demos.utils import features
+from demos.configurations.configuration import Configuration
 
 
 class Processor(object):

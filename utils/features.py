@@ -1,13 +1,26 @@
+# -*- coding: utf-8 -*
 import numpy as np
 import wave
 import librosa
 
-from demo.configuration.configuration import Configuration
+from configurations.constant import Constant
 
 
 class Features(object):
-    def __init__(self, wav_path):
+    def __init__(self, wav_path, type):
+        configuration = Constant(type=type).get_configuration()
+
         self.wav_path = wav_path
+        self.win_length = configuration.win_length
+        self.window_stride = configuration.window_stride
+        self.window_size = configuration.window_size
+        self.sample_rate = configuration.sample_rate
+        self.window = configuration.window
+        self.max_audio_len = configuration.max_audio_len
+        self.embedding_dim = configuration.embedding_dim
+
+        self.n_fft = int(self.sample_rate * self.window_size)
+        self.hop_length = int(self.sample_rate * self.window_stride)
 
     @staticmethod
     def load_audio(wav_path, normalize=True):
@@ -34,8 +47,8 @@ class Features(object):
         spec = None
         try:
             wav = Features.load_audio(self.wav_path)
-            D = librosa.stft(wav, n_fft=Configuration.n_fft, hop_length=Configuration.hop_length,
-                             win_length=Configuration.win_length, window=Configuration.window)
+            D = librosa.stft(wav, n_fft=self.n_fft, hop_length=self.hop_length,
+                             win_length=self.win_length, window=self.window)
 
             spec, phase = librosa.magphase(D)
             spec = np.log1p(spec)
@@ -48,19 +61,19 @@ class Features(object):
             print('spec error %s' % e)
 
         try:
-            if len(spec) >= Configuration.max_audio_len:
-                spec = spec[:Configuration.max_audio_len]
-                origanal_len = Configuration.max_audio_len
+            if len(spec) >= self.max_audio_len:
+                spec = spec[:self.max_audio_len]
+                origanal_len = self.max_audio_len
             else:
                 origanal_len = len(spec)
                 spec = np.concatenate(
-                    (spec, np.zeros([Configuration.max_audio_len - origanal_len, Configuration.embedding_dim])), 0
+                    (spec, np.zeros([self.max_audio_len - origanal_len, self.embedding_dim])), 0
                 )
 
             # 最后一行元素为句子实际长度
             spec = np.concatenate(
-                (spec, np.array([origanal_len for _ in range(Configuration.embedding_dim)]).reshape(
-                    [1, Configuration.embedding_dim])))
+                (spec, np.array([origanal_len for _ in range(self.embedding_dim)]).reshape(
+                    [1, self.embedding_dim])))
         except Exception as e:
             print('conc error %s' % e)
 
@@ -74,8 +87,8 @@ class Features(object):
         mfcc = None
         try:
             wav, sr = librosa.load(self.wav_path, mono=True)
-            mfcc = librosa.feature.mfcc(wav, sr, hop_length=int(Configuration.window_stride * sr),
-                                        n_fft=int(Configuration.window_size * sr))
+            mfcc = librosa.feature.mfcc(wav, sr, hop_length=int(self.window_stride * sr),
+                                        n_fft=int(self.window_size * sr))
             mfcc = mfcc.transpose((1, 0))
 
             if normalize:
@@ -84,18 +97,18 @@ class Features(object):
             print('mfcc error %s' % e)
 
         try:
-            if len(mfcc) >= Configuration.max_audio_len:
-                mfcc = mfcc[:Configuration.max_audio_len]
-                origanal_len = Configuration.max_audio_len
+            if len(mfcc) >= self.max_audio_len:
+                mfcc = mfcc[:self.max_audio_len]
+                origanal_len = self.max_audio_len
             else:
                 origanal_len = len(mfcc)
                 mfcc = np.concatenate(
-                    (mfcc, np.zeros([Configuration.max_audio_len - origanal_len, Configuration.embedding_dim])), 0)
+                    (mfcc, np.zeros([self.max_audio_len - origanal_len, self.embedding_dim])), 0)
 
             # 最后一行元素为句子实际长度
             mfcc = np.concatenate(
-                (mfcc, np.array([origanal_len for _ in range(Configuration.embedding_dim)]).reshape(
-                    [1, Configuration.embedding_dim])))
+                (mfcc, np.array([origanal_len for _ in range(self.embedding_dim)]).reshape(
+                    [1, self.embedding_dim])))
         except Exception as e:
             print('conc error %s' % e)
 

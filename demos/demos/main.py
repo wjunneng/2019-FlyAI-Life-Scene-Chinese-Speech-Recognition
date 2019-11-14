@@ -7,10 +7,10 @@ import os
 from torch.optim import Adam
 from torch import nn
 
-from demo.models.net import Decoder, Encoder, Net
-from demo.models.model import Model
-from demo.utils import processor
-from demo.configuration.configuration import Configuration
+from demos.models.net import Decoder, Encoder, Net
+from demos.models.model import Model
+from demos.utils import processor
+from demos.configurations.configuration import Configuration
 
 
 def main():

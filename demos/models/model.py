@@ -3,8 +3,8 @@ import numpy
 import os
 import torch
 
-from demo.utils import processor
-from demo.configuration.configuration import Configuration
+from demos.utils import processor
+from demos.configurations.configuration import Configuration
 
 # 动态加载类和函数.
 __import__('net', fromlist=["Net"])
