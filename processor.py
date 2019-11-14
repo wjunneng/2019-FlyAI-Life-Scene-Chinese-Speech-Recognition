@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*
+import os
 import json
 import numpy as np
 
@@ -41,7 +42,7 @@ class Processor(Base):
             # 方法一
             wav_features = Features(wav_path=path, type=self.type).method_1()
             # 方法二
-            # wav_features = Features(wav_path=os.path.join(path.DATA_PATH, audio_path), type=self.type).method_2()
+            # wav_features = Features(wav_path=path, type=self.type).method_2()
         except Exception as e:
             print('error %s' % e)
 

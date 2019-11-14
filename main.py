@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 import os
-import tqdm
+from tqdm import tqdm
 import torch
 import argparse
 import numpy as np
@@ -19,10 +19,10 @@ from configurations.constant import Constant
 
 class Seq2seq(object):
     def __init__(self):
-        configuration = Constant(type='seq2seq').get_configuration()
-        self.embedding_dim = configuration.embedding_dim
-        self.hidden_dim = configuration.hidden_dim
-        self.output_dim = configuration.output_dim
+        self.configuration = Constant(type='seq2seq').get_configuration()
+        self.embedding_dim = self.configuration.embedding_dim
+        self.hidden_dim = self.configuration.hidden_dim
+        self.output_dim = self.configuration.output_dim
 
     def main(self):
         # 超参
@@ -45,12 +45,11 @@ class Seq2seq(object):
 
         # 定义网络
         encoder = net.Encoder(embedding_dim=self.embedding_dim, hidden_dim=self.hidden_dim)
-        decoder = net.Decoder(output_dim=self.output_dim, embedding_dim=self.embedding_dim,
-                              hidden_dim=self.hidden_dim)
+        decoder = net.Decoder(output_dim=self.output_dim, embedding_dim=self.embedding_dim, hidden_dim=self.hidden_dim)
         network = net.Net(encoder=encoder, decoder=decoder, device=device)
         loss_function = nn.CrossEntropyLoss()
         optimizer = Adam(network.parameters(), lr=0.001)
-        model = Model(data)
+        model = Model(dataset=data, configuration=self.configuration)
 
         lowest_loss = 10
         # 得到训练和测试的数据
@@ -205,8 +204,6 @@ class Tramsformer(object):
                                     tgt_emb_prj_weight_sharing=self.tgt_emb_prj_weight_sharing,
                                     pe_maxlen=self.pe_maxlen)
             model = net_1.Transformer(encoder, decoder)
-            # print(model)
-            # model = nn.DataParallel(model)
 
             # optimizer
             optimizer = net_1.TransformerOptimizer(
@@ -226,10 +223,12 @@ class Tramsformer(object):
 
         # Custom dataloaders
         train_dataset = AiShellDataset(args=args, split='train', pickle_file=None)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=self.pad_collate,
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
+                                                   collate_fn=self.pad_collate,
                                                    pin_memory=True, shuffle=True, num_workers=args.num_workers)
         valid_dataset = AiShellDataset(args=args, split='dev', pickle_file=None)
-        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=self.pad_collate,
+        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size,
+                                                   collate_fn=self.pad_collate,
                                                    pin_memory=True, shuffle=False, num_workers=args.num_workers)
 
         # Epochs
@@ -240,6 +239,7 @@ class Tramsformer(object):
                                     optimizer=optimizer,
                                     epoch=epoch,
                                     logger=logger)
+            print('epoch: %d, train_loss: %s' % (epoch, str(train_loss)))
 
             lr = optimizer.lr
             print('\nLearning rate: {}'.format(lr))
@@ -278,7 +278,8 @@ class Tramsformer(object):
 
             # Forward prop.
             pred, gold = model(padded_input, input_lengths, padded_target)
-            loss, n_correct = net_1.Util.cal_performance(pred, gold, smoothing=self.label_smoothing)
+            loss, n_correct = net_1.Util.cal_performance(pad_id=self.pad_id, pred=pred, gold=gold,
+                                                         smoothing=self.label_smoothing)
 
             # Back prop.
             optimizer.zero_grad()
@@ -313,7 +314,8 @@ class Tramsformer(object):
             with torch.no_grad():
                 # Forward prop.
                 pred, gold = model(padded_input, input_lengths, padded_target)
-                loss, n_correct = net_1.Util.cal_performance(pred, gold, smoothing=self.label_smoothing)
+                loss, n_correct = net_1.Util.cal_performance(pad_id=self.pad_id, pred=pred, gold=gold,
+                                                             smoothing=self.label_smoothing)
 
             # Keep track of metrics
             losses.update(loss.item())

@@ -3,7 +3,6 @@ import numpy
 import os
 import torch
 
-from configurations.configuration import Configuration
 from flyai.model.base import Base
 from path import MODEL_PATH
 
@@ -12,17 +11,20 @@ __import__('net', fromlist=["Net"])
 
 # 判断gpu是否可用
 if torch.cuda.is_available():
-    device = 'cuda'
+    device = 'cuda:0'
 else:
     device = 'cpu'
 device = torch.device(device)
 
 
 class Model(Base):
-    def __init__(self, dataset):
+    def __init__(self, dataset, configuration):
+        self.configuration = configuration
         self.dataset = dataset
+        self.max_tgt_len = self.configuration['max_tgt_len']
+        self.Torch_MODEL_NAME = self.configuration['Torch_MODEL_NAME']
 
-    def predict(self, path, name=Configuration.Torch_MODEL_NAME, **data):
+    def predict(self, path, **data):
         """
         预测单条数据
         :param path:
@@ -31,7 +33,7 @@ class Model(Base):
         :return:
         """
         # 加载网络
-        network = torch.load(os.path.join(path, name))
+        network = torch.load(os.path.join(path, self.Torch_MODEL_NAME))
         network = network.to(device)
         network.eval()
 
@@ -46,7 +48,7 @@ class Model(Base):
         x_data = x_data.float().to(device)
 
         # outputs: eg.(src_seqs, src_lengths, max_trg_len)
-        outputs, _ = network.predict(src_seqs=x_data, src_lengths=length, max_trg_len=Configuration.max_tgt_len)
+        outputs, _ = network.predict(src_seqs=x_data, src_lengths=length, max_trg_len=self.max_tgt_len)
         outputs = outputs.squeeze(1).cpu().detach().numpy()
         output_words = self.dataset.to_categorys(outputs)
 
@@ -62,9 +64,9 @@ class Model(Base):
         :param datas:
         :return:
         """
-        print('模型路径: %s' % os.path.join(MODEL_PATH, Configuration.Torch_MODEL_NAME))
+        print('模型路径: %s' % os.path.join(MODEL_PATH, self.Torch_MODEL_NAME))
         # 加载网络
-        network = torch.load(os.path.join(MODEL_PATH, Configuration.Torch_MODEL_NAME))
+        network = torch.load(os.path.join(MODEL_PATH, self.Torch_MODEL_NAME))
         network = network.to(device)
         network.eval()
 
@@ -80,7 +82,7 @@ class Model(Base):
             x_data = x_data.permute(1, 0, 2)
             x_data = x_data.float().to(device)
 
-            outputs, _ = network.predict(src_seqs=x_data, src_lengths=length, max_trg_len=Configuration.max_tgt_len)
+            outputs, _ = network.predict(src_seqs=x_data, src_lengths=length, max_trg_len=self.max_tgt_len)
             outputs = outputs.squeeze(1).cpu().detach().numpy()
             output_words = self.dataset.to_categorys(outputs)
 
@@ -111,7 +113,7 @@ class Model(Base):
             end_id = min((i + 1) * batch_size, data_len)
             yield x_shuffle[start_id:end_id], y_shuffle[start_id:end_id]
 
-    def save_model(self, network, path, name=Configuration.Torch_MODEL_NAME, overwrite=False):
+    def save_model(self, network, path, name=None, overwrite=False):
         """
         保存模型
         :param network:
@@ -120,8 +122,8 @@ class Model(Base):
         :param overwrite:
         :return:
         """
-        super().save_model(network, path, name, overwrite)
-        torch.save(network, os.path.join(path, name))
+        super().save_model(session=network, path=path, name=self.Torch_MODEL_NAME, overwrite=overwrite)
+        torch.save(network, os.path.join(path, self.Torch_MODEL_NAME))
 
     def delete_file(self, path):
         """

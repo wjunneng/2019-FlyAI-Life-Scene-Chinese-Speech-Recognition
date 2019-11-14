@@ -16,5 +16,4 @@ Torch_MODEL_NAME: "model.pkl"
 sample_rate: 16000
 window_size: 0.01
 window_stride: 0.01
-win_length: n_fft
 window: "hamming"

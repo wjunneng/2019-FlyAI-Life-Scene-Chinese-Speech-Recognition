@@ -32,7 +32,7 @@ class Constant(object):
         self.config_file_path = os.path.join(self.project_path, 'configurations', self.type + '.yaml')
 
     def get_configuration(self):
-        configuration = AttrDict(yaml.load(open(self.config_file_path)))
+        configuration = AttrDict(yaml.safe_load(open(self.config_file_path)))
 
         return configuration
 

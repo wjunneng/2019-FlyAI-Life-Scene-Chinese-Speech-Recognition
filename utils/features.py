@@ -11,7 +11,6 @@ class Features(object):
         configuration = Constant(type=type).get_configuration()
 
         self.wav_path = wav_path
-        self.win_length = configuration.win_length
         self.window_stride = configuration.window_stride
         self.window_size = configuration.window_size
         self.sample_rate = configuration.sample_rate
@@ -48,7 +47,7 @@ class Features(object):
         try:
             wav = Features.load_audio(self.wav_path)
             D = librosa.stft(wav, n_fft=self.n_fft, hop_length=self.hop_length,
-                             win_length=self.win_length, window=self.window)
+                             win_length=self.n_fft, window=self.window)
 
             spec, phase = librosa.magphase(D)
             spec = np.log1p(spec)
