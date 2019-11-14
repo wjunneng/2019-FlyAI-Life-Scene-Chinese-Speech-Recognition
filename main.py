@@ -8,13 +8,15 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data.dataloader import default_collate
 
-from utils.util import AverageMeter, Util, AiShellDataset
-from model import Model
-from flyai.dataset import Dataset
-from path import MODEL_PATH, LOG_PATH
+
 import net
 import net_1
+from model import Model
+from path import MODEL_PATH
+from processor import Processor
+from flyai.dataset import Dataset
 from configurations.constant import Constant
+from utils.util import AverageMeter, Util, AiShellDataset
 
 
 class Seq2seq(object):
@@ -108,11 +110,11 @@ class Seq2seq(object):
             print(str(i) + "/" + str(data.get_step()))
 
 
-class Tramsformer(object):
+class Transformer(object):
     def __init__(self):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        configuration = Constant(type='tramsformer').get_configuration()
+        configuration = Constant(type='transformer').get_configuration()
         self.label_smoothing = configuration.label_smoothing
         self.print_freq = configuration.print_freq
         self.vocab_size = configuration.vocab_size
@@ -142,9 +144,13 @@ class Tramsformer(object):
         self.k = configuration.k
         self.lr = configuration.lr
         self.warmup_steps = configuration.warmup_steps
+        self.checkpoint = configuration.checkpoint
         self.pad_id = configuration.PAD
         self.sos_id = configuration.SOS
         self.eos_id = configuration.EOS
+        # 获取device
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.configuration = configuration
 
     def pad_collate(self, batch):
         max_input_len = float('-inf')
@@ -169,16 +175,30 @@ class Tramsformer(object):
 
         return default_collate(batch)
 
-    def main(self, args):
+    def main(self):
         torch.manual_seed(7)
         np.random.seed(7)
-        checkpoint = args.checkpoint
+        checkpoint = self.checkpoint
         start_epoch = 0
         best_loss = float('inf')
         epochs_since_improvement = 0
 
+        # 创建文件夹
+        if os.path.exists(MODEL_PATH) is False:
+            os.makedirs(MODEL_PATH)
+
+        # 数据获取辅助类
+        x_train, y_train_old, x_val, y_val_old = Dataset(epochs=self.epochs, batch=self.batch_size,
+                                                 val_batch=self.batch_size).get_all_data()
+
+        y_train = [{'label': Processor().input_y(label=i['label'])} for i in y_train_old]
+        y_val = [{'label': Processor().input_y(label=i['label'])} for i in y_val_old]
+
+        train = list(zip(x_train, y_train))
+        val = list(zip(x_val, y_val))
+
         # Initialize / load checkpoint
-        if checkpoint is None:
+        if checkpoint == 'None':
             # model
             encoder = net_1.Encoder(d_input=self.d_input * self.LFR_m,
                                     n_layers=self.n_layers_enc,
@@ -207,7 +227,7 @@ class Tramsformer(object):
 
             # optimizer
             optimizer = net_1.TransformerOptimizer(
-                torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09))
+                torch.optim.Adam(model.parameters(), lr=self.lr, betas=(0.9, 0.98), eps=1e-09))
 
         else:
             checkpoint = torch.load(checkpoint)
@@ -222,17 +242,17 @@ class Tramsformer(object):
         model = model.to(self.device)
 
         # Custom dataloaders
-        train_dataset = AiShellDataset(args=args, split='train', pickle_file=None)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
+        train_dataset = AiShellDataset(args=self.configuration, samples=train, split='train')
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.batch_size,
                                                    collate_fn=self.pad_collate,
-                                                   pin_memory=True, shuffle=True, num_workers=args.num_workers)
-        valid_dataset = AiShellDataset(args=args, split='dev', pickle_file=None)
-        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size,
+                                                   pin_memory=True, shuffle=True, num_workers=self.num_workers)
+        valid_dataset = AiShellDataset(args=self.configuration, samples=val, split='val')
+        valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=self.batch_size,
                                                    collate_fn=self.pad_collate,
-                                                   pin_memory=True, shuffle=False, num_workers=args.num_workers)
+                                                   pin_memory=True, shuffle=False, num_workers=self.num_workers)
 
         # Epochs
-        for epoch in range(start_epoch, args.epochs):
+        for epoch in range(start_epoch, self.epochs):
             # One epoch's training
             train_loss = self.train(train_loader=train_loader,
                                     model=model,
@@ -264,7 +284,8 @@ class Tramsformer(object):
             Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
 
     def train(self, train_loader, model, optimizer, epoch, logger):
-        model.train()  # train mode (dropout and batchnorm is used)
+        # train mode (dropout and batchnorm is used)
+        model.train()
 
         losses = AverageMeter()
 
@@ -327,4 +348,4 @@ class Tramsformer(object):
 
 
 if __name__ == '__main__':
-    Seq2seq().main()
+    Transformer().main()

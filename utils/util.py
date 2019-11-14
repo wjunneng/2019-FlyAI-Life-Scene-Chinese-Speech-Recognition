@@ -164,6 +164,35 @@ class Util(object):
             spec[:, t0:t0 + num_frames_to_mask] = value
         return spec
 
+    @staticmethod
+    def build_LFR_features(inputs, m, n):
+        """
+        Actually, this implements stacking frames and skipping frames.
+        if m = 1 and n = 1, just return the origin features.
+        if m = 1 and n > 1, it works like skipping.
+        if m > 1 and n = 1, it works like stacking but only support right frames.
+        if m > 1 and n > 1, it works like LFR.
+        Args:
+            inputs_batch: inputs is T x D np.ndarray
+            m: number of frames to stack
+            n: number of frames to skip
+        """
+        # LFR_inputs_batch = []
+        # for inputs in inputs_batch:
+        LFR_inputs = []
+        T = inputs.shape[0]
+        T_lfr = int(np.ceil(T / n))
+        for i in range(T_lfr):
+            if m <= T - i * n:
+                LFR_inputs.append(np.hstack(inputs[i * n:i * n + m]))
+            else:  # process last LFR frame
+                num_padding = m - (T - i * n)
+                frame = np.hstack(inputs[i * n:])
+                for _ in range(num_padding):
+                    frame = np.hstack((frame, inputs[-1]))
+                LFR_inputs.append(frame)
+        return np.vstack(LFR_inputs)
+
 
 class AverageMeter(object):
     """
@@ -187,20 +216,19 @@ class AverageMeter(object):
 
 
 class AiShellDataset(Dataset):
-    def __init__(self, args, split, pickle_file):
+    def __init__(self, samples, args, split):
         self.args = args
-        with open(pickle_file, 'rb') as file:
-            data = pickle.load(file)
-
-        self.samples = data[split]
-        print('loading {} {} samples...'.format(len(self.samples), split))
+        self.samples = samples
+        print('loading {}{} samples...'.format(len(self.samples), split))
 
     def __getitem__(self, i):
         sample = self.samples[i]
-        wave = sample['wave']
-        trn = sample['trn']
+        wave = os.path.join('/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/data/input',
+                            sample[0]['audio_path'])
+        trn = sample[1]['label']
 
-        feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
+        feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True,
+                                       sample_rate=self.args.simple_rate)
         # zero mean and unit variance
         feature = (feature - feature.mean()) / feature.std()
         feature = Util.spec_augment(feature)
