@@ -12,8 +12,8 @@ __import__('net', fromlist=["Net"])
 # 获取device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 模型类型
-TYPE = 'seq2seq'
-
+# TYPE = 'seq2seq'
+TYPE = 'transformer'
 
 class Model(object):
     def __init__(self, dataset):

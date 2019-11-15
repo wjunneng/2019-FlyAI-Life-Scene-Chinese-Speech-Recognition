@@ -7,7 +7,8 @@ from utils.features import Features
 from configurations.constant import Constant
 
 # 模型类型
-TYPE = 'seq2seq'
+# TYPE = 'seq2seq'
+TYPE = 'transformer'
 
 
 class Processor(object):

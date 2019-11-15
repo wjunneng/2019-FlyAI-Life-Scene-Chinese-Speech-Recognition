@@ -66,8 +66,8 @@ warmup_steps: 4000
 # ############################ other
 # checkpoint
 checkpoint: 'None'
-# print_preq
-print_preq: 50
+# print_freq
+print_freq: 2
 # 词汇大小
 vocab_size: 3507
 # sample_rate
