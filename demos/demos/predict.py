@@ -5,10 +5,10 @@
 import numpy as np
 
 from demos.models import model
-from demos.utils import processor
+from demos.demos import processor
 
 
-def predict(data_paths):
+def predict(data_paths, type):
     """
     wav 数据路径
     :param datas:
@@ -21,11 +21,13 @@ def predict(data_paths):
         inputs.append(pro.input_x(audio_path=data_path['audio_path']))
 
     # 预测值
-    prediction = model.Model().predict_all(np.array(inputs))
+    prediction = model.Model(dataset=None, type=type).predict_all(np.array(inputs))
     print(prediction)
 
 
 if __name__ == '__main__':
+    type = 'seq2seq'
+
     datas = [
         # 以下列出列夫 托尔斯泰所着小说 战争与和平 中的人物 括号给出其首次出现章节
         {'audio_path': "/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/data/input/"
@@ -59,4 +61,4 @@ if __name__ == '__main__':
                        "wav/common_voice_zh-CN_18585207.wav"},
     ]
 
-    predict(datas)
+    predict(datas, type=type)

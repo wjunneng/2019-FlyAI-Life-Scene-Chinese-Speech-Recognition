@@ -17,3 +17,14 @@ sample_rate: 16000
 window_size: 0.01
 window_stride: 0.01
 window: "hamming"
+
+# 训练数据的路径
+DATA_PATH: data/input
+# 模型保存的路径
+MODEL_PATH: demos/data/output/model
+# 训练log的输出路径
+LOG_PATH: data/output/logs
+# Words.json路径
+WORDS_PATH: data/input/words.json
+# label Path
+DEV_PATH: data/input/dev.csv

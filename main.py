@@ -8,7 +8,6 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data.dataloader import default_collate
 
-
 import net
 import net_1
 from model import Model
@@ -19,7 +18,7 @@ from configurations.constant import Constant
 from utils.util import AverageMeter, Util, AiShellDataset
 
 
-class Seq2seq(object):
+class Seq2Seq(object):
     def __init__(self):
         self.configuration = Constant(type='seq2seq').get_configuration()
         self.embedding_dim = self.configuration.embedding_dim
@@ -189,13 +188,16 @@ class Transformer(object):
 
         # 数据获取辅助类
         x_train, y_train_old, x_val, y_val_old = Dataset(epochs=self.epochs, batch=self.batch_size,
-                                                 val_batch=self.batch_size).get_all_data()
+                                                         val_batch=self.batch_size).get_all_data()
 
         y_train = [{'label': Processor().input_y(label=i['label'])} for i in y_train_old]
         y_val = [{'label': Processor().input_y(label=i['label'])} for i in y_val_old]
 
         train = list(zip(x_train, y_train))
         val = list(zip(x_val, y_val))
+
+        train = [dict(sample[0], **sample[1]) for sample in train]
+        val = [dict(sample[0], **sample[1]) for sample in val]
 
         # Initialize / load checkpoint
         if checkpoint == 'None':

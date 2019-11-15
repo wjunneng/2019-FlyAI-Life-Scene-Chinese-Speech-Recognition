@@ -44,7 +44,7 @@ epochs: 10
 # reshuffle the data at every epoch
 shuffle: 1
 # Batch size
-batch_size: 8
+batch_size: 2
 # Batch frames. If this is not 0, batch size will make no sense
 batch_frames: 0
 # Batch size is reduced if the input sequence length > ML
@@ -70,6 +70,8 @@ checkpoint: 'None'
 print_preq: 50
 # 词汇大小
 vocab_size: 3507
+# sample_rate
+sample_rate: 16000
 # token
 PAD: 0
 UNK: 1
@@ -81,3 +83,15 @@ UNK_FLAG: '<unk>'
 SOS_FLAG: '<sos>'
 EOS_FLAG: '<eos>'
 SPACE_FLAG: '<space>'
+
+
+# 训练数据的路径
+DATA_PATH: data/input
+# 模型保存的路径
+MODEL_PATH: data/output/model
+# 训练log的输出路径
+LOG_PATH: data/output/logs
+# Words.json路径
+WORDS_PATH: data/input/words.json
+# label Path
+DEV_PATH: data/input/dev.csv

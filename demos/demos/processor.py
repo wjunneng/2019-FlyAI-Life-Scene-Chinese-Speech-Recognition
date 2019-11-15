@@ -4,15 +4,13 @@ import json
 import numpy as np
 
 from utils.features import Features
-from flyai.processor.download import check_download
-from flyai.processor.base import Base
-from path import DATA_PATH, WORDS_PATH
 from configurations.constant import Constant
 
 
-class Processor(Base):
+class Processor():
     def __init__(self):
-        self.type = 'transformer'
+        self.type = 'seq2seq'
+        self.project_path = Constant(type=self.type).get_project_path()
         self.configuration = Constant(type=self.type).get_configuration()
         self.max_audio_len = self.configuration.max_audio_len
         self.max_tgt_len = self.configuration.max_tgt_len
@@ -20,18 +18,25 @@ class Processor(Base):
         self.char_dict_res = dict()
         self.eos_id = self.configuration.EOS
 
+        self.MODEL_PATH = os.path.join(self.project_path, self.configuration.MODEL_PATH)
+        self.WORDS_PATH = os.path.join(self.project_path, self.configuration.WORDS_PATH)
+        self.DEV_PATH = os.path.join(self.project_path, self.configuration.DEV_PATH)
+        self.DATA_PATH = os.path.join(self.project_path, self.configuration.DATA_PATH)
+
         # 构建字典
-        with open(WORDS_PATH) as fin:
+        with open(self.WORDS_PATH) as fin:
             words = json.loads(fin.read())
         words = list(words.keys())
-        # 去除
-        # words = [" ", "<unk>"] + words
-        # 新增
-        words = [self.configuration.PAD_FLAG,
-                 self.configuration.UNK_FLAG,
-                 self.configuration.SOS_FLAG,
-                 self.configuration.EOS_FLAG,
-                 self.configuration.SPACE_FLAG] + words
+        if self.type == 'seq2seq':
+            # 去除
+            words = [" ", "<unk>"] + words
+        elif self.type == 'transformer':
+            # 新增
+            words = [self.configuration.PAD_FLAG,
+                     self.configuration.UNK_FLAG,
+                     self.configuration.SOS_FLAG,
+                     self.configuration.EOS_FLAG,
+                     self.configuration.SPACE_FLAG] + words
 
         for i, word in enumerate(words):
             self.char_dict[word] = i
@@ -45,11 +50,11 @@ class Processor(Base):
             :param audio_path: wav路径
             :return:
         """
+        audio_path = os.path.join(self.DATA_PATH, audio_path)
         wav_features = None
         try:
-            path = check_download(audio_path, DATA_PATH)
             # 方法一
-            wav_features = Features(wav_path=path, type=self.type).method_1()
+            wav_features = Features(wav_path=audio_path, type=self.type).method_1()
             # 方法二
             # wav_features = Features(wav_path=path, type=self.type).method_2()
         except Exception as e:
@@ -68,21 +73,21 @@ class Processor(Base):
         # 获取单词索引
         word_list = [self.char_dict.get(word) for word in label if self.char_dict.get(word) is not None]
 
-        # 添加eos_id
-        word_list.append(self.eos_id)
+        if self.type == 'seq2seq':
+            origanal_len = len(word_list)
+            if len(word_list) >= self.max_tgt_len:
+                origanal_len = self.max_tgt_len
+                word_list = word_list[:self.max_tgt_len]
+            else:
+                for i in range(len(word_list), self.max_tgt_len):
+                    # 不够长度则补0
+                    word_list.append(0)
+            # 最后一个元素为句子长度x
+            word_list.append(origanal_len)
 
-        """
-        origanal_len = len(word_list)
-        if len(word_list) >= self.max_tgt_len:
-            origanal_len = self.max_tgt_len
-            word_list = word_list[:self.max_tgt_len]
-        else:
-            for i in range(len(word_list), self.max_tgt_len):
-                # 不够长度则补0
-                word_list.append(0)
-        # 最后一个元素为句子长度x
-        word_list.append(origanal_len)
-        """
+        elif self.type == 'transformer':
+            # 添加eos_id
+            word_list.append(self.eos_id)
 
         return word_list
 

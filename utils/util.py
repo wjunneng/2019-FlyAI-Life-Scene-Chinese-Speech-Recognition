@@ -7,6 +7,7 @@ import logging
 import librosa
 import random
 import numpy as np
+from torchvision import transforms
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import default_collate
@@ -224,17 +225,17 @@ class AiShellDataset(Dataset):
     def __getitem__(self, i):
         sample = self.samples[i]
         wave = os.path.join('/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/data/input',
-                            sample[0]['audio_path'])
-        trn = sample[1]['label']
+                            sample['audio_path'])
+        trn = sample['label']
 
         feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True,
-                                       sample_rate=self.args.simple_rate)
+                                       sample_rate=self.args.sample_rate)
         # zero mean and unit variance
         feature = (feature - feature.mean()) / feature.std()
         feature = Util.spec_augment(feature)
         feature = Util.build_LFR_features(feature, m=self.args.LFR_m, n=self.args.LFR_n)
 
-        return feature, trn
+        return torch.from_numpy(feature), torch.from_numpy(np.array(trn))
 
     def __len__(self):
         return len(self.samples)
