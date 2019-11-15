@@ -6,12 +6,14 @@ import numpy as np
 from utils.features import Features
 from configurations.constant import Constant
 
+# 模型类型
+TYPE = 'seq2seq'
 
-class Processor():
+
+class Processor(object):
     def __init__(self):
-        self.type = 'seq2seq'
-        self.project_path = Constant(type=self.type).get_project_path()
-        self.configuration = Constant(type=self.type).get_configuration()
+        self.project_path = Constant(type=TYPE).get_project_path()
+        self.configuration = Constant(type=TYPE).get_configuration()
         self.max_audio_len = self.configuration.max_audio_len
         self.max_tgt_len = self.configuration.max_tgt_len
         self.char_dict = dict()
@@ -27,10 +29,10 @@ class Processor():
         with open(self.WORDS_PATH) as fin:
             words = json.loads(fin.read())
         words = list(words.keys())
-        if self.type == 'seq2seq':
+        if TYPE == 'seq2seq':
             # 去除
             words = [" ", "<unk>"] + words
-        elif self.type == 'transformer':
+        elif TYPE == 'transformer':
             # 新增
             words = [self.configuration.PAD_FLAG,
                      self.configuration.UNK_FLAG,
@@ -54,7 +56,7 @@ class Processor():
         wav_features = None
         try:
             # 方法一
-            wav_features = Features(wav_path=audio_path, type=self.type).method_1()
+            wav_features = Features(wav_path=audio_path).method_1()
             # 方法二
             # wav_features = Features(wav_path=path, type=self.type).method_2()
         except Exception as e:
@@ -73,7 +75,7 @@ class Processor():
         # 获取单词索引
         word_list = [self.char_dict.get(word) for word in label if self.char_dict.get(word) is not None]
 
-        if self.type == 'seq2seq':
+        if TYPE == 'seq2seq':
             origanal_len = len(word_list)
             if len(word_list) >= self.max_tgt_len:
                 origanal_len = self.max_tgt_len
@@ -85,7 +87,7 @@ class Processor():
             # 最后一个元素为句子长度x
             word_list.append(origanal_len)
 
-        elif self.type == 'transformer':
+        elif TYPE == 'transformer':
             # 添加eos_id
             word_list.append(self.eos_id)
 

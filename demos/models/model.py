@@ -11,12 +11,14 @@ __import__('net', fromlist=["Net"])
 
 # 获取device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# 模型类型
+TYPE = 'seq2seq'
 
 
 class Model(object):
-    def __init__(self, dataset, type):
-        self.configuration = Constant(type=type).get_configuration()
-        self.project_path = Constant(type=type).get_project_path()
+    def __init__(self, dataset):
+        self.configuration = Constant(type=TYPE).get_configuration()
+        self.project_path = Constant(type=TYPE).get_project_path()
         self.dataset = dataset
         self.max_tgt_len = self.configuration.max_tgt_len
         self.Torch_MODEL_NAME = self.configuration.Torch_MODEL_NAME
@@ -116,7 +118,7 @@ class Model(object):
             end_id = min((i + 1) * batch_size, data_len)
             yield x_shuffle[start_id:end_id], y_shuffle[start_id:end_id]
 
-    def save_model(self, network, path, name=None):
+    def save_model(self, network, path, name):
         """
         保存模型
         :param network:
@@ -124,5 +126,4 @@ class Model(object):
         :param name:
         :return:
         """
-        name = self.Torch_MODEL_NAME
         torch.save(obj=network, f=os.path.join(path, name))

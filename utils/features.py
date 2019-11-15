@@ -5,10 +5,13 @@ import librosa
 
 from configurations.constant import Constant
 
+# 模型类型
+TYPE = 'seq2seq'
+
 
 class Features(object):
-    def __init__(self, wav_path, type):
-        configuration = Constant(type=type).get_configuration()
+    def __init__(self, wav_path):
+        configuration = Constant(type=TYPE).get_configuration()
 
         self.wav_path = wav_path
         self.window_stride = configuration.window_stride
@@ -28,7 +31,6 @@ class Features(object):
         :param normalize:
         :return:
         """
-
         with wave.open(wav_path) as wav_file:
             wav_data = np.frombuffer(wav_file.readframes(wav_file.getnframes()), dtype='int32')
             wav_data = wav_data.astype("float")

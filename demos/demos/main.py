@@ -18,6 +18,10 @@ class Seq2Seq(object):
         type = 'seq2seq'
         self.project_path = Constant(type=type).get_project_path()
         self.configuration = Constant(type=type).get_configuration()
+
+        self.epoch = self.configuration.epoch
+        self.batch_size = self.configuration.batch_size
+
         self.embedding_dim = self.configuration.embedding_dim
         self.hidden_dim = self.configuration.hidden_dim
         self.output_dim = self.configuration.output_dim
@@ -27,15 +31,6 @@ class Seq2Seq(object):
         self.DEV_PATH = os.path.join(self.project_path, self.configuration.DEV_PATH)
 
     def main(self):
-        # 超参
-        parser = argparse.ArgumentParser()
-        # 训练轮数
-        parser.add_argument("-e", "--EPOCHS", default=1, type=int, help="train epochs")
-        # 训练批次
-        parser.add_argument("-b", "--BATCH", default=4, type=int, help="batch size")
-        # 获取超参数
-        args = parser.parse_args()
-
         # 获取device
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # 创建文件夹
@@ -62,12 +57,12 @@ class Seq2Seq(object):
         network = Net(encoder=encoder, decoder=decoder, device=device)
         loss_function = nn.CrossEntropyLoss()
         optimizer = Adam(network.parameters(), lr=0.001)
-        model = Model(dataset=data, configuration=self.configuration)
+        model = Model(dataset=data)
 
         count = 0
         loss_min_value = 1e10
-        for epoch in range(5):
-            batch = pro.get_batch(X, y, args.BATCH)
+        for epoch in range(self.epoch):
+            batch = pro.get_batch(X, y, self.batch_size)
             while True:
                 try:
                     # x_train: (batch_size, audio_en_size, emb_size) .eg(4, 901,20)
@@ -102,8 +97,7 @@ class Seq2Seq(object):
                     y_train = torch.stack(y_train, dim=0).permute(1, 0).contiguous()
 
                     # 输出结果
-                    outputs = network(src_seqs=x_train, src_lengths=input_lengths, trg_seqs=y_train).float().to(
-                        device)
+                    outputs = network(src_seqs=x_train, src_lengths=input_lengths, trg_seqs=y_train).float().to(device)
                     # 梯度清零
                     optimizer.zero_grad()
                     # 计算损失
