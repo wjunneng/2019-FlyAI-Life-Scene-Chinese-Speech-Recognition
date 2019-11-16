@@ -38,13 +38,13 @@ label_smoothing: 0.1
 
 # ############################ training config
 # number of maximum epochs
-epochs: 10
+epochs: 1000
 
 # ############################ minbatch
 # reshuffle the data at every epoch
 shuffle: 1
 # Batch size
-batch_size: 2
+batch_size: 10
 # Batch frames. If this is not 0, batch size will make no sense
 batch_frames: 0
 # Batch size is reduced if the input sequence length > ML
@@ -58,7 +58,7 @@ num_workers: 8
 # tunable scalar multiply to learning rate
 k: 0.2
 # Init learning rate
-lr: 0.001
+lr: 0.005
 # warmup steps
 warmup_steps: 4000
 
@@ -69,9 +69,11 @@ checkpoint: 'None'
 # print_freq
 print_freq: 2
 # 词汇大小
-vocab_size: 3507
+vocab_size: 3510
 # sample_rate
 sample_rate: 16000
+# dimension of feature
+input_dim: 80
 # token
 PAD: 0
 UNK: 1
@@ -85,13 +87,24 @@ EOS_FLAG: '<eos>'
 SPACE_FLAG: '<space>'
 
 
+## 训练数据的路径
+#DATA_PATH: data/input
+## 模型保存的路径
+#MODEL_PATH: data/output/model
+## 训练log的输出路径
+#LOG_PATH: data/output/logs
+## Words.json路径
+#WORDS_PATH: data/input/words.json
+## label Path
+#DEV_PATH: data/input/dev.csv
+
 # 训练数据的路径
-DATA_PATH: data/input
+DATA_PATH: demos/data/input
 # 模型保存的路径
-MODEL_PATH: data/output/model
+MODEL_PATH: demos/demos/data/output/model
 # 训练log的输出路径
-LOG_PATH: data/output/logs
+LOG_PATH: demos/data/output/logs
 # Words.json路径
-WORDS_PATH: data/input/words.json
+WORDS_PATH: demos/data/input/words.json
 # label Path
-DEV_PATH: data/input/dev.csv
+DEV_PATH: demos/data/input/dev.csv

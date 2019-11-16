@@ -302,8 +302,9 @@ class Transformer(object):
             else:
                 epochs_since_improvement = 0
 
-            # Save checkpoint
-            Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
+            if epoch % 100 == 0:
+                # Save checkpoint
+                Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
 
     def train(self, train_loader, model, optimizer, epoch, logger):
         # train mode (dropout and batchnorm is used)
