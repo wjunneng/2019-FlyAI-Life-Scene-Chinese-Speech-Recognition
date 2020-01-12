@@ -1,8 +1,4 @@
-# 2019-FlyAI-Life-Scene-Chinese-Speech-Recognition
 
-2019 FlyAi 生活场景汉语语音识别
-
-![](images/rule_0.png)
 
 ### CommonVoiceChineseASR01_FlyAI
 
@@ -148,7 +144,7 @@
 > 该文件在**FlyAI开源库**的`flyai.dataset`包中，通过`next_train_batch()`和`next_validation_batch()`方法获得`x_train` `y_train` `x_val` `y_val`数据。
 >
 > FlyAI开源库可以通过`pip3 install -i https://pypi.flyai.com/simple flyai` 安装。
-，
+
 ***
 
 #### FlyaI终端命令

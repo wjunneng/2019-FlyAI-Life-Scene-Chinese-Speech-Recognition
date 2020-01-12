@@ -1,6 +1,6 @@
 ---
 name: Common Voice Chinese ASR
-author: 未半
+author: xiaochen
 description: Common Voice Chinese ASR
 topic: Common Voice Chinese ASR
 algorithm: Seq2Seq
@@ -38,6 +38,6 @@ evaluate:
   score: pytorch_percision
 
 servers:
-  - id: flyai
-    url: https://flyai.com
+ - id: flyai
+   url: https://flyai.com
 ...
