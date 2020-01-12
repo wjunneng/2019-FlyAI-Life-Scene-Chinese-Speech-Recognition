@@ -9,7 +9,6 @@ from path import MODEL_PATH, LOG_PATH
 from flyai.dataset import Dataset
 from model import Model
 
-
 # 超参
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--EPOCHS", default=10, type=int, help="train epochs")
@@ -22,18 +21,16 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 
-device = torch.device(device) 
-
-
+device = torch.device(device)
 
 os.makedirs(MODEL_PATH, exist_ok=True)
 os.makedirs(LOG_PATH, exist_ok=True)
 
 # 数据获取辅助类
 data = Dataset(epochs=args.EPOCHS, batch=args.BATCH, val_batch=args.BATCH)
-en=Encoder(20,64)
-de=Decoder(3507,20,64)
-network = Net(en,de,device)
+en = Encoder(20, 64)
+de = Decoder(3507, 20, 64)
+network = Net(en, de, device)
 loss_fn = nn.CrossEntropyLoss()
 
 optimizer = Adam(network.parameters())
@@ -41,41 +38,41 @@ optimizer = Adam(network.parameters())
 model = Model(data)
 iteration = 0
 
-
 lowest_loss = 10
 # 得到训练和测试的数据
 for i in range(data.get_step()):
     network.train()
-    
+
     # 得到训练和测试的数据
-    x_train, y_train = data.next_train_batch() # 读取数据; shape:(sen_len,batch,embedding)
-    x_test, y_test = data.next_validation_batch() # 读取数据; shape:(sen_len,batch,embedding)
+    x_train, y_train = data.next_train_batch()  # 读取数据; shape:(sen_len,batch,embedding)
+    x_test, y_test = data.next_validation_batch()  # 读取数据; shape:(sen_len,batch,embedding)
 
     batch_len = y_train.shape[0]
 
-    input_lengths = x_train[:,-1,0]
+    input_lengths = x_train[:, -1, 0]
     input_lengths = input_lengths.tolist()
 
     input_lengths = [int(x) for x in input_lengths]
-    y_lengths = y_train[:,-1]
+    y_lengths = y_train[:, -1]
     y_lengths = y_lengths.tolist()
-    
-    x_train = x_train[:,:-1,:] ## 除去长度信息
-    x_train = torch.from_numpy(x_train) #shape:(batch,sen_len,embedding)
-    x_train = x_train.float().to(device) 
-    y_train = y_train[:,:-1] ## 除去长度信息
-    y_train = torch.from_numpy(y_train) #shape:(batch,sen_len)
-    y_train = torch.LongTensor(y_train)
-    y_train = y_train.to(device) 
 
-    seq_pairs = sorted(zip(x_train.contiguous(), y_train.contiguous(), input_lengths, y_lengths), key=lambda x: x[2], reverse=True)
+    x_train = x_train[:, :-1, :]  ## 除去长度信息
+    x_train = torch.from_numpy(x_train)  # shape:(batch,sen_len,embedding)
+    x_train = x_train.float().to(device)
+    y_train = y_train[:, :-1]  ## 除去长度信息
+    y_train = torch.from_numpy(y_train)  # shape:(batch,sen_len)
+    y_train = torch.LongTensor(y_train)
+    y_train = y_train.to(device)
+
+    seq_pairs = sorted(zip(x_train.contiguous(), y_train.contiguous(), input_lengths, y_lengths), key=lambda x: x[2],
+                       reverse=True)
     x_train, y_train, input_lengths, y_lengths = zip(*seq_pairs)
-    x_train = torch.stack(x_train,dim=0).permute(1,0,2).contiguous()
-    y_train = torch.stack(y_train,dim=0).permute(1,0).contiguous()
+    x_train = torch.stack(x_train, dim=0).permute(1, 0, 2).contiguous()
+    y_train = torch.stack(y_train, dim=0).permute(1, 0).contiguous()
     input_length_tensor = torch.tensor(input_lengths).long()
     y_lengths = torch.tensor(y_lengths).long()
 
-    outputs = network(x_train,input_lengths,y_train)
+    outputs = network(x_train, input_lengths, y_train)
 
     optimizer.zero_grad()
     outputs = outputs.float()
@@ -93,5 +90,3 @@ for i in range(data.get_step()):
         model.save_model(network, MODEL_PATH, overwrite=True)
         print("step %d, best lowest_loss %g" % (i, lowest_loss))
     print(str(i) + "/" + str(data.get_step()))
-    
-

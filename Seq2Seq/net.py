@@ -9,6 +9,7 @@ import random
 
 num_dims = 200
 
+
 class Encoder(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, num_layers=2, dropout=0.2):
         super().__init__()
@@ -31,7 +32,8 @@ class Encoder(nn.Module):
         outputs, hidden = self.rnn(packed)
         outputs, output_lengths = torch.nn.utils.rnn.pad_packed_sequence(outputs)
         return outputs, hidden
-    
+
+
 class Attention(nn.Module):
     def __init__(self, hidden_dim):
         super(Attention, self).__init__()
@@ -54,6 +56,7 @@ class Attention(nn.Module):
         v = self.v.repeat(encoder_outputs.size(1), 1).unsqueeze(1)  # (batch_size, 1, hidden_size)
         energy = torch.bmm(v, energy)  # (batch_size, 1, seq_len)
         return energy.squeeze(1)  # (batch_size, seq_len)
+
 
 class Decoder(nn.Module):
     def __init__(self, output_dim, embedding_dim, hidden_dim, num_layers=2, dropout=0.2):
@@ -95,6 +98,7 @@ class Decoder(nn.Module):
         # outputs = [sent len, batch size, vocab_size]
         return output, hidden, attn_weight
 
+
 class Net(nn.Module):
     def __init__(self, encoder, decoder, device, teacher_forcing_ratio=0.5):
         super().__init__()
@@ -118,7 +122,7 @@ class Net(nn.Module):
         # first input to the decoder is the <sos> tokens
         output = trg_seqs[0, :]
 
-        for t in range(1, max_len): # skip sos
+        for t in range(1, max_len):  # skip sos
             output, hidden, _ = self.decoder(output, hidden, encoder_outputs)
             outputs[t] = output
             teacher_force = random.random() < self.teacher_forcing_ratio
@@ -138,4 +142,3 @@ class Net(nn.Module):
             outputs[t] = output
             output = output.max(1)[1]
         return outputs, attn_weights
-
