@@ -1,8 +1,8 @@
+# -*- coding:utf-8 -*-
 import torch.nn as nn
 
-from .attention import MultiHeadAttention
-from .module import PositionalEncoding, PositionwiseFeedForward
-from .utils import get_non_pad_mask, get_attn_pad_mask
+from Seq2Seq.Utils.util import Util
+from Seq2Seq.transformer.module import PositionalEncoding, PositionwiseFeedForward, MultiHeadAttention
 
 
 class Encoder(nn.Module):
@@ -10,8 +10,8 @@ class Encoder(nn.Module):
     Encoder of Transformer including self-attention and feed forward.
     """
 
-    def __init__(self, d_input=320, n_layers=6, n_head=8, d_k=64, d_v=64,
-                 d_model=512, d_inner=2048, dropout=0.1, pe_maxlen=5000):
+    def __init__(self, d_input=320, n_layers=6, n_head=8, d_k=64, d_v=64, d_model=512, d_inner=2048, dropout=0.1,
+                 pe_maxlen=5000):
         super(Encoder, self).__init__()
         # parameters
         self.d_input = d_input
@@ -30,9 +30,8 @@ class Encoder(nn.Module):
         self.positional_encoding = PositionalEncoding(d_model, max_len=pe_maxlen)
         self.dropout = nn.Dropout(dropout)
 
-        self.layer_stack = nn.ModuleList([
-            EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
-            for _ in range(n_layers)])
+        self.layer_stack = nn.ModuleList([EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
+                                          for _ in range(n_layers)])
 
     def forward(self, padded_input, input_lengths, return_attns=False):
         """
@@ -45,9 +44,9 @@ class Encoder(nn.Module):
         enc_slf_attn_list = []
 
         # Prepare masks
-        non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
+        non_pad_mask = Util.get_non_pad_mask(padded_input, input_lengths=input_lengths)
         length = padded_input.size(1)
-        slf_attn_mask = get_attn_pad_mask(padded_input, input_lengths, length)
+        slf_attn_mask = Util.get_attn_pad_mask(padded_input, input_lengths, length)
 
         # Forward
         enc_output = self.dropout(

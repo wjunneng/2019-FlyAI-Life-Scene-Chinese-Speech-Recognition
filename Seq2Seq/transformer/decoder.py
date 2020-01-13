@@ -2,16 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from config import IGNORE_ID
-from .attention import MultiHeadAttention
-from .module import PositionalEncoding, PositionwiseFeedForward
-from .utils import get_attn_key_pad_mask, get_attn_pad_mask, get_non_pad_mask, get_subsequent_mask, pad_list
-
-
-# filename = 'bigram_freq.pkl'
-# print('loading {}...'.format(filename))
-# with open(filename, 'rb') as file:
-#     bigram_freq = pickle.load(file)
+from Seq2Seq.args import IGNORE_ID
+from Seq2Seq.Utils.util import Util
+from Seq2Seq.transformer.module import PositionalEncoding, PositionwiseFeedForward, MultiHeadAttention
 
 
 class Decoder(nn.Module):
@@ -70,9 +63,10 @@ class Decoder(nn.Module):
         ys_out = [torch.cat([y, eos], dim=0) for y in ys]
         # padding for ys with -1
         # pys: utt x olen
-        ys_in_pad = pad_list(ys_in, self.eos_id)
-        ys_out_pad = pad_list(ys_out, IGNORE_ID)
+        ys_in_pad = Util.pad_list(ys_in, self.eos_id)
+        ys_out_pad = Util.pad_list(ys_out, IGNORE_ID)
         assert ys_in_pad.size() == ys_out_pad.size()
+
         return ys_in_pad, ys_out_pad
 
     def forward(self, padded_input, encoder_padded_outputs,
@@ -89,18 +83,18 @@ class Decoder(nn.Module):
         ys_in_pad, ys_out_pad = self.preprocess(padded_input)
 
         # Prepare masks
-        non_pad_mask = get_non_pad_mask(ys_in_pad, pad_idx=self.eos_id)
+        non_pad_mask = Util.get_non_pad_mask(ys_in_pad, pad_idx=self.eos_id)
 
-        slf_attn_mask_keypad = get_attn_key_pad_mask(seq_k=ys_in_pad,
-                                                     seq_q=ys_in_pad,
-                                                     pad_idx=self.eos_id)
-        slf_attn_mask_subseq = get_subsequent_mask(ys_in_pad).type_as(slf_attn_mask_keypad)
+        slf_attn_mask_keypad = Util.get_attn_key_pad_mask(seq_k=ys_in_pad,
+                                                          seq_q=ys_in_pad,
+                                                          pad_idx=self.eos_id)
+        slf_attn_mask_subseq = Util.get_subsequent_mask(ys_in_pad).type_as(slf_attn_mask_keypad)
         slf_attn_mask = (slf_attn_mask_keypad + slf_attn_mask_subseq).gt(0)
 
         output_length = ys_in_pad.size(1)
-        dec_enc_attn_mask = get_attn_pad_mask(encoder_padded_outputs,
-                                              encoder_input_lengths,
-                                              output_length)
+        dec_enc_attn_mask = Util.get_attn_pad_mask(encoder_padded_outputs,
+                                                   encoder_input_lengths,
+                                                   output_length)
 
         # Forward
         dec_output = self.dropout(self.tgt_word_emb(ys_in_pad) * self.x_logit_scale +
@@ -125,6 +119,7 @@ class Decoder(nn.Module):
 
         if return_attns:
             return pred, gold, dec_slf_attn_list, dec_enc_attn_list
+
         return pred, gold
 
     def recognize_beam(self, encoder_outputs, char_list, args):
@@ -168,7 +163,7 @@ class Decoder(nn.Module):
                 # print('freq: ' + str(freq))
                 # -- Prepare masks
                 non_pad_mask = torch.ones_like(ys).float().unsqueeze(-1)  # 1xix1
-                slf_attn_mask = get_subsequent_mask(ys)
+                slf_attn_mask = Util.get_subsequent_mask(ys)
 
                 # -- Forward
                 dec_output = self.dropout(
@@ -240,6 +235,7 @@ class Decoder(nn.Module):
         # compitable with LAS implementation
         for hyp in nbest_hyps:
             hyp['yseq'] = hyp['yseq'][0].cpu().numpy().tolist()
+
         return nbest_hyps
 
 
