@@ -14,6 +14,8 @@ from time import localtime
 from Seq2Seq import args
 from flyai.dataset import Dataset
 
+from Seq2Seq.Utils.util import SortedByCountsDict
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -32,17 +34,21 @@ class Instructor(object):
 
     def generate(self):
         self.data = Dataset(epochs=self.args.EPOCHS, batch=self.args.BATCH, val_batch=self.args.BATCH)
-        audio_path, label, _, _ = self.data.get_all_data()
+        audio_paths, labels, _, _ = self.data.get_all_data()
 
         # wav文件路径
-        audio_path = [i['audio_path'] for i in audio_path]
+        audio_paths = [i['audio_path'] for i in audio_paths]
         # waw文本数据 TODO：此处包含空格, 测试去掉空格能否提升模型性能
-        label = [list(i['label']) for i in label]
+        labels = [list(i['label']) for i in labels]
+
+        # 构建字典
+        sortedDict = SortedByCountsDict()
+        for label in labels:
+            sortedDict.append_tokens(label)
+        vocab = sortedDict.get_vocab()
+        ivocab = sortedDict.get_i_vocab()
 
 
-
-
-        print(label.head())
 
     def run(self):
         pass

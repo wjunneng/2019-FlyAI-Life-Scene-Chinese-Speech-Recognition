@@ -16,7 +16,7 @@ class SortedByCountsDict(object):
             self.vocab[token] = 1
         else:
             self.vocab[token] += 1
-            self.vocab = OrderedDict(sorted(self.vocab.items(), key=lambda item: item[1]))
+            self.vocab = OrderedDict(sorted(self.vocab.items(), key=lambda item: item[1], reverse=True))
 
     def append_tokens(self, tokens: list):
         for token in tokens:
