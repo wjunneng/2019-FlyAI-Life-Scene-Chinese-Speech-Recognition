@@ -1,92 +1,75 @@
 # -*- coding: utf-8 -*
-import argparse
-import torch
-import torch.nn as nn
-from torch.optim import Adam
 import os
-from net import Decoder, Encoder, Net
-from path import MODEL_PATH, LOG_PATH
+import sys
+
+os.chdir(sys.path[0])
+import argparse
+import logging
+import torch
+import random
+import numpy as np
+from time import strftime
+from time import localtime
+
+from Seq2Seq import args
 from flyai.dataset import Dataset
-from model import Model
 
-# 超参
-parser = argparse.ArgumentParser()
-parser.add_argument("-e", "--EPOCHS", default=10, type=int, help="train epochs")
-parser.add_argument("-b", "--BATCH", default=16, type=int, help="batch size")
-args = parser.parse_args()
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
-# 判断gpu是否可用
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-device = torch.device(device)
 
-os.makedirs(MODEL_PATH, exist_ok=True)
-os.makedirs(LOG_PATH, exist_ok=True)
+class Instructor(object):
+    """
+    特点：使用flyai字典的get all data  | 自己进行划分next batch
+    """
 
-# 数据获取辅助类
-data = Dataset(epochs=args.EPOCHS, batch=args.BATCH, val_batch=args.BATCH)
-en = Encoder(20, 64)
-de = Decoder(3507, 20, 64)
-network = Net(en, de, device)
-loss_fn = nn.CrossEntropyLoss()
+    def __init__(self, args):
+        self.args = args
+        self.generate()
 
-optimizer = Adam(network.parameters())
+    def generate(self):
+        self.data = Dataset(epochs=self.args.EPOCHS, batch=self.args.BATCH, val_batch=self.args.BATCH)
+        audio_path, label, _, _ = self.data.get_all_data()
 
-model = Model(data)
-iteration = 0
+        # wav文件路径
+        audio_path = [i['audio_path'] for i in audio_path]
+        # waw文本数据 TODO：此处包含空格, 测试去掉空格能否提升模型性能
+        label = [list(i['label']) for i in label]
 
-lowest_loss = 10
-# 得到训练和测试的数据
-for i in range(data.get_step()):
-    network.train()
 
-    # 得到训练和测试的数据
-    x_train, y_train = data.next_train_batch()  # 读取数据; shape:(sen_len,batch,embedding)
-    x_test, y_test = data.next_validation_batch()  # 读取数据; shape:(sen_len,batch,embedding)
 
-    batch_len = y_train.shape[0]
 
-    input_lengths = x_train[:, -1, 0]
-    input_lengths = input_lengths.tolist()
+        print(label.head())
 
-    input_lengths = [int(x) for x in input_lengths]
-    y_lengths = y_train[:, -1]
-    y_lengths = y_lengths.tolist()
+    def run(self):
+        pass
 
-    x_train = x_train[:, :-1, :]  ## 除去长度信息
-    x_train = torch.from_numpy(x_train)  # shape:(batch,sen_len,embedding)
-    x_train = x_train.float().to(device)
-    y_train = y_train[:, :-1]  ## 除去长度信息
-    y_train = torch.from_numpy(y_train)  # shape:(batch,sen_len)
-    y_train = torch.LongTensor(y_train)
-    y_train = y_train.to(device)
 
-    seq_pairs = sorted(zip(x_train.contiguous(), y_train.contiguous(), input_lengths, y_lengths), key=lambda x: x[2],
-                       reverse=True)
-    x_train, y_train, input_lengths, y_lengths = zip(*seq_pairs)
-    x_train = torch.stack(x_train, dim=0).permute(1, 0, 2).contiguous()
-    y_train = torch.stack(y_train, dim=0).permute(1, 0).contiguous()
-    input_length_tensor = torch.tensor(input_lengths).long()
-    y_lengths = torch.tensor(y_lengths).long()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='ASR')
+    parser.add_argument("-e", '--EPOCHS', default=10, type=int, help='train epochs')
+    parser.add_argument('-b', '--BATCH', default=4, type=int, help='batch size')
+    config = parser.parse_args()
 
-    outputs = network(x_train, input_lengths, y_train)
+    args.EPOCHS = config.EPOCHS
+    args.BATCH = config.BATCH
 
-    optimizer.zero_grad()
-    outputs = outputs.float()
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.cuda.manual_seed_all(args.seed)
 
-    loss = loss_fn(outputs.view(-1, outputs.shape[2]), y_train.view(-1))
+    if os.path.exists(args.log_dir) is False:
+        os.mkdir(args.log_dir)
 
-    # backward transmit loss
-    loss.backward()
-    # adjust parameters using Adam
-    optimizer.step()
-    print(loss)
+    log_file = '{}-{}.log'.format(args.model_name, strftime('%y%m%d-%H%M', localtime()))
+    logger.addHandler(logging.FileHandler(os.path.join(args.log_dir, log_file)))
 
-    if loss < lowest_loss:
-        lowest_loss = loss
-        model.save_model(network, MODEL_PATH, overwrite=True)
-        print("step %d, best lowest_loss %g" % (i, lowest_loss))
-    print(str(i) + "/" + str(data.get_step()))
+    instructor = Instructor(args=args)
+    instructor.run()
