@@ -53,15 +53,11 @@ class Encoder(nn.Module):
         slf_attn_mask = Util.get_attn_pad_mask(padded_input, input_lengths, length)
 
         # Forward
-        enc_output = self.dropout(
-            self.layer_norm_in(self.linear_in(padded_input)) +
-            self.positional_encoding(padded_input))
+        enc_output = self.dropout(self.layer_norm_in(self.linear_in(padded_input)) +
+                                  self.positional_encoding(padded_input))
 
         for enc_layer in self.layer_stack:
-            enc_output, enc_slf_attn = enc_layer(
-                enc_output,
-                non_pad_mask=non_pad_mask,
-                slf_attn_mask=slf_attn_mask)
+            enc_output, enc_slf_attn = enc_layer(enc_output, non_pad_mask=non_pad_mask, slf_attn_mask=slf_attn_mask)
             if return_attns:
                 enc_slf_attn_list += [enc_slf_attn]
 
@@ -78,14 +74,11 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1):
         super(EncoderLayer, self).__init__()
-        self.slf_attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, dropout=dropout)
-        self.pos_ffn = PositionwiseFeedForward(
-            d_model, d_inner, dropout=dropout)
+        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
 
     def forward(self, enc_input, non_pad_mask=None, slf_attn_mask=None):
-        enc_output, enc_slf_attn = self.slf_attn(
-            enc_input, enc_input, enc_input, mask=slf_attn_mask)
+        enc_output, enc_slf_attn = self.slf_attn(enc_input, enc_input, enc_input, mask=slf_attn_mask)
         enc_output *= non_pad_mask
 
         enc_output = self.pos_ffn(enc_output)

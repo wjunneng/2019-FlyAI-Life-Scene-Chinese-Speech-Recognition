@@ -1,77 +1,50 @@
 # -*- coding: utf-8 -*
-# -*- coding: utf-8 -*
-import numpy
 import os
+import sys
+
+os.chdir(sys.path[0])
 import torch
 from flyai.model.base import Base
 
-__import__('net', fromlist=["Net"])
+from Seq2Seq import args
+from Seq2Seq.Utils.util import SortedByCountsDict
+from Seq2Seq.Utils.util import Util
 
-Torch_MODEL_NAME = "model.pkl"
-
-# 判断gpu是否可用
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
-
-device = torch.device(device)
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
 class Model(Base):
     def __init__(self, dataset):
         self.dataset = dataset
+        self.args = args
+        self.vocab = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir).get_vocab()
+        self.i_vocab = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir).get_i_vocab()
+        self.model = Util.load_checkpoint(os.path.join(self.args.output_dir, 'checkpoint.tar'))
 
-    def predict(self, path, name=Torch_MODEL_NAME, **data):
-        network = torch.load(os.path.join(path, name))
-        network = network.to(device)
-        network.eval()
-        # x_data shape: (batch,sen_len,embedding)
-        x_data = self.dataset.predict_data(**data)
-        # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
-        length = [int(x_data[0, -1, 0])]
-        # 除去长度信息
-        x_data = x_data[:, :-1, :]
-        x_data = torch.from_numpy(x_data)
-        x_data = x_data.permute(1, 0, 2)
-        x_data = x_data.float().to(device)
+    def predict(self, **data):
+        audio_path = self.dataset.predict_data(**data)[0]
+        feature = Util.extract_feature(input_file=audio_path, feature='fbank', dim=self.args.input_dim, cmvn=True)
+        feature = Util.build_LFR_features(feature, m=self.args.LFR_m, n=self.args.LFR_n)
+        input = torch.from_numpy(feature).to(DEVICE)
+        input_length = [input[0].shape[0]]
+        input_length = torch.tensor(input_length, dtype=torch.long).to(DEVICE)
+        with torch.no_grad():
+            nbest_hyps = self.model.recognize(input, input_length, self.i_vocab, args)
 
-        outputs, _ = network.predict(x_data, length)
-        outputs = outputs.squeeze(1).cpu().detach().numpy()
-        output_words = self.dataset.to_categorys(outputs)
+        hyp_list = []
+        for hyp in nbest_hyps:
+            out = hyp['yseq']
+            out = [self.i_vocab[idx] for idx in out if idx not in (self.args.sos_id, self.args.eos_id)]
+            out = ''.join(out)
+            hyp_list.append(out)
 
-        report = ''
-        for i in output_words:
-            report = report + i
-        report = report.strip('~“”')
-        return report
+        print(hyp_list)
 
     def predict_all(self, datas):
-        network = torch.load(os.path.join(MODEL_PATH, Torch_MODEL_NAME))
-        network = network.to(device)
-        network.eval()
-
-        prediction = []
+        labels = []
         for data in datas:
-            # x_data shape: (batch,sen_len,embedding)
-            x_data = self.dataset.predict_data(**data)
-            # 因为输入batch为1，取第0个元素。 最后一行 的所有数均为句子实际长度
-            length = [int(x_data[0, -1, 0])]
-            # 除去长度信息
-            x_data = x_data[:, :-1, :]
-            x_data = torch.from_numpy(x_data)
-            x_data = x_data.permute(1, 0, 2)
-            x_data = x_data.float().to(device)
+            predicts = self.predict(audio_path=data['audio_path'])
 
-            outputs, _ = network.predict(x_data, length)
-            outputs = outputs.squeeze(1).cpu().detach().numpy()
-            output_words = self.dataset.to_categorys(outputs)
+            labels.append(predicts)
 
-            report = ''
-            for i in output_words:
-                report = report + i
-            report = report.strip()
-            prediction.append(report)
-        return prediction
-
-
+        return labels

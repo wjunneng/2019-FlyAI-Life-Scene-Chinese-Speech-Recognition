@@ -101,28 +101,22 @@ class Instructor(object):
             # One epoch's training
             # train mode (dropout and batchnorm is used)
             model.train()
-
             losses = AverageMeter()
 
             # Batches
-            for i, (data) in enumerate(train_loader):
+            for i, data in enumerate(train_loader):
                 # Move to GPU, if available
+                data = tuple(t.to(DEVICE) for t in data)
                 padded_input, padded_target, input_lengths = data
-                padded_input = padded_input.to(DEVICE)
-                padded_target = padded_target.to(DEVICE)
-                input_lengths = input_lengths.to(DEVICE)
 
                 # Forward prop.
                 pred, gold = model(padded_input, input_lengths, padded_target)
                 loss, n_correct = Util.cal_performance(pred, gold, smoothing=args.label_smoothing)
-
                 # Back prop.
                 optimizer.zero_grad()
                 loss.backward()
-
                 # Update weights
                 optimizer.step()
-
                 # Keep track of metrics
                 losses.update(loss.item())
 
@@ -131,26 +125,20 @@ class Instructor(object):
                     logger.info('Epoch: [{0}][{1}/{2}]\t'
                                 'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(epoch, i, len(train_loader), loss=losses))
 
-            logger.info('model:{}/train_loss:{}'.format(losses.avg, epoch))
-
+            logger.info('train_loss:{}/epoch:{}'.format(losses.avg, epoch))
             lr = optimizer.lr
-            logger.info('model:{}/learning_rate:{}'.format(lr, epoch))
-
+            logger.info('learning_rate:{}/epoch:{}'.format(lr, epoch))
             step_num = optimizer.step_num
             logger.info('Step num: {}\n'.format(step_num))
 
             # One epoch's validation
             model.eval()
-
             losses = AverageMeter()
-
             # Batches
             for data in valid_loader:
                 # Move to GPU, if available
+                data = tuple(t.to(DEVICE) for t in data)
                 padded_input, padded_target, input_lengths = data
-                padded_input = padded_input.to(DEVICE)
-                padded_target = padded_target.to(DEVICE)
-                input_lengths = input_lengths.to(DEVICE)
 
                 with torch.no_grad():
                     # Forward prop.
@@ -183,7 +171,7 @@ class Instructor(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASR')
-    parser.add_argument("-e", '--EPOCHS', default=4, type=int, help='train epochs')
+    parser.add_argument("-e", '--EPOCHS', default=10, type=int, help='train epochs')
     parser.add_argument('-b', '--BATCH', default=4, type=int, help='batch size')
     config = parser.parse_args()
 

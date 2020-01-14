@@ -9,6 +9,7 @@ import pickle
 import librosa
 import random
 import numpy as np
+from copy import deepcopy
 import torch.nn.functional as F
 from collections import OrderedDict
 from torch.utils.data import Dataset
@@ -34,7 +35,6 @@ class SortedByCountsDict(object):
 
         if os.path.exists(dump_dir):
             self.vocab = self.load_pkl(load_dir=self.dump_dir)
-            self.s_vocab = OrderedDict(self.vocab)
 
     def append_token(self, token: str):
         if token not in self.s_vocab:
@@ -47,20 +47,21 @@ class SortedByCountsDict(object):
             self.append_token(token)
 
     def get_vocab(self):
+        if len(self.vocab) != 0:
+            return self.vocab
+
         before = {'<sos>': 0, '<eos>': 1}
         after = dict(sorted(self.s_vocab.items(), key=lambda item: item[1], reverse=True))
         after = dict(zip(after.keys(), [i + 2 for i in range(len(after))]))
 
-        if '<sos>' in after.keys():
-            self.vocab = after
-        else:
-            self.vocab.update(before)
-            self.vocab.update(after)
+        self.vocab.update(before)
+        self.vocab.update(after)
 
         return self.vocab
 
     def get_i_vocab(self):
-        self.i_vocab = dict(zip((value, key) for (key, value) in self.vocab.items()))
+        self.vocab = self.get_vocab()
+        self.i_vocab = {value: key for (key, value) in self.vocab.items()}
 
         return self.i_vocab
 
@@ -407,6 +408,12 @@ class Util(object):
         if is_best:
             torch.save(state, os.path.join(output_dir, 'BEST_checkpoint.tar'))
 
+    @staticmethod
+    def load_checkpoint(output_dir):
+        state = torch.load(f=output_dir)
+
+        return state['model']
+
 
 class TransformerOptimizer(object):
     """A simple wrapper class for learning rate scheduling"""
@@ -445,7 +452,6 @@ class AiShellDataset(Dataset):
     def __getitem__(self, i):
         sample = self.samples[i]
         wave = os.path.join(self.args.wav_dir, sample['wav'])
-        trn = [self.vocab[i] if i in self.vocab.keys() else -1 for i in sample['trn']]
 
         feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
         # zero mean and unit variance
@@ -453,7 +459,11 @@ class AiShellDataset(Dataset):
         feature = Util.spec_augment(feature)
         feature = Util.build_LFR_features(feature, m=self.args.LFR_m, n=self.args.LFR_n)
 
-        return feature, trn
+        if 'trn' in sample.keys():
+            trn = [self.vocab[i] if i in self.vocab.keys() else -1 for i in sample['trn']]
+            return feature, trn
+
+        return feature
 
     def __len__(self):
         return len(self.samples)

@@ -98,3 +98,11 @@ eos_id = 1
 grad_clip = 5.
 # print training/validation stats  every __ batches
 print_freq = 5
+
+# --------------------------------------------------Prediction parameters
+# Beam size
+beam_size = 5
+# Nbest size
+nbest = 1
+# Max output length. If ==0 (default), it uses a end-detect function to automatically find maximum hypothesis lengths
+decode_max_len = 100

@@ -25,19 +25,19 @@ model:
       - name: audio_path
         type: url
     to_type: float
-    to_shape: [800,20,1]
+    to_shape:
   output:
     columns:
       - name: label
         type: string
     to_type: float
-    to_shape: [-1,3507]
+    to_shape:
 
 
 evaluate:
   score: pytorch_percision
 
 servers:
- - id: flyai
-   url: https://flyai.com
+  - id: flyai
+    url: https://flyai.com
 ...

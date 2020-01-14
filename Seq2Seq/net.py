@@ -33,8 +33,8 @@ class Net(nn.Module):
         """
         encoder_padded_outputs, *_ = self.encoder(padded_input, input_lengths)
         # pred is score before softmax
-        pred, gold, *_ = self.decoder(padded_target, encoder_padded_outputs,
-                                      input_lengths)
+        pred, gold, *_ = self.decoder(padded_target, encoder_padded_outputs, input_lengths)
+
         return pred, gold
 
     def recognize(self, input, input_length, char_list, args):
@@ -48,7 +48,6 @@ class Net(nn.Module):
             nbest_hyps:
         """
         encoder_outputs, *_ = self.encoder(input.unsqueeze(0), input_length)
-        nbest_hyps = self.decoder.recognize_beam(encoder_outputs[0],
-                                                 char_list,
-                                                 args)
+        nbest_hyps = self.decoder.recognize_beam(encoder_outputs[0], char_list, args)
+
         return nbest_hyps

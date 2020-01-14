@@ -5,9 +5,18 @@
 from flyai.dataset import Dataset
 
 from Seq2Seq.model import Model
-from Seq2Seq.path import MODEL_PATH
 
 data = Dataset()
 model = Model(data)
-p = model.predict(MODEL_PATH, upper='竹 杖 芒 鞋 轻 胜 马')
+# p = model.predict(
+#     audio_path='/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18585358.wav')
+
+p = model.predict_all(
+    [{'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18585358.wav'},
+     {'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18594110.wav'},
+     {'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18813047.wav'},
+     {'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18626711.wav'},
+     {'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18817087.wav'},
+     {'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18813359.wav'}])
+
 print(p)
