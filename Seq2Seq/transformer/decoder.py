@@ -1,3 +1,8 @@
+# -*- coding:utf-8 -*-
+import os
+import sys
+
+os.chdir(sys.path[0])
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,13 +15,8 @@ from Seq2Seq.transformer.module import PositionalEncoding, PositionwiseFeedForwa
 class Decoder(nn.Module):
     """ A decoder model with self attention mechanism. """
 
-    def __init__(
-            self, sos_id=0, eos_id=1,
-            n_tgt_vocab=4335, d_word_vec=512,
-            n_layers=6, n_head=8, d_k=64, d_v=64,
-            d_model=512, d_inner=2048, dropout=0.1,
-            tgt_emb_prj_weight_sharing=True,
-            pe_maxlen=5000):
+    def __init__(self, sos_id=0, eos_id=1, n_tgt_vocab=4335, d_word_vec=512, n_layers=6, n_head=8, d_k=64, d_v=64,
+                 d_model=512, d_inner=2048, dropout=0.1, tgt_emb_prj_weight_sharing=True, pe_maxlen=5000):
         super(Decoder, self).__init__()
         # parameters
         self.sos_id = sos_id  # Start of Sentence

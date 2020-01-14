@@ -1,7 +1,18 @@
 # -*- coding:utf-8 -*-
-from collections import OrderedDict
+import os
+import sys
+
+os.chdir(sys.path[0])
+
 import torch
+import pickle
+import librosa
+import random
+import numpy as np
 import torch.nn.functional as F
+from collections import OrderedDict
+from torch.utils.data import Dataset
+from torch.utils.data.dataloader import default_collate
 
 from Seq2Seq.args import IGNORE_ID
 
@@ -11,22 +22,40 @@ class SortedByCountsDict(object):
     构建具备自动排序的字典类
     """
 
-    def __init__(self):
-        self.vocab = OrderedDict()
-        self.i_vocab = OrderedDict()
+    def __init__(self, dump_dir):
+        # dump dir
+        self.dump_dir = dump_dir
+        # 字：次数
+        self.s_vocab = OrderedDict()
+        # 字：索引
+        self.vocab = {}
+        # 索引：字
+        self.i_vocab = {}
+
+        if os.path.exists(dump_dir):
+            self.vocab = self.load_pkl(load_dir=self.dump_dir)
+            self.s_vocab = OrderedDict(self.vocab)
 
     def append_token(self, token: str):
-        if token not in self.vocab:
-            self.vocab[token] = 1
+        if token not in self.s_vocab:
+            self.s_vocab[token] = 1
         else:
-            self.vocab[token] += 1
+            self.s_vocab[token] += 1
 
     def append_tokens(self, tokens: list):
         for token in tokens:
             self.append_token(token)
 
     def get_vocab(self):
-        self.vocab = OrderedDict(sorted(self.vocab.items(), key=lambda item: item[1], reverse=True))
+        before = {'<sos>': 0, '<eos>': 1}
+        after = dict(sorted(self.s_vocab.items(), key=lambda item: item[1], reverse=True))
+        after = dict(zip(after.keys(), [i + 2 for i in range(len(after))]))
+
+        if '<sos>' in after.keys():
+            self.vocab = after
+        else:
+            self.vocab.update(before)
+            self.vocab.update(after)
 
         return self.vocab
 
@@ -34,6 +63,16 @@ class SortedByCountsDict(object):
         self.i_vocab = dict(zip((value, key) for (key, value) in self.vocab.items()))
 
         return self.i_vocab
+
+    def dump_pkl(self):
+        with open(self.dump_dir, mode='wb') as file:
+            pickle.dump(file=file, obj=self.vocab)
+
+    def load_pkl(self, load_dir):
+        with open(load_dir, mode='rb') as file:
+            self.vocab = pickle.load(file=file)
+
+        return self.vocab
 
 
 class Util(object):
@@ -233,6 +272,142 @@ class Util(object):
 
         return loss
 
+    @staticmethod
+    def normalize(yt):
+        yt_max = np.max(yt)
+        yt_min = np.min(yt)
+        a = 1.0 / (yt_max - yt_min)
+        b = -(yt_max + yt_min) / (2 * (yt_max - yt_min))
+
+        yt = yt * a + b
+        return yt
+
+    @staticmethod
+    def extract_feature(input_file, feature='fbank', dim=80, cmvn=True, delta=False, delta_delta=False,
+                        window_size=25, stride=10, save_feature=None):
+        y, sr = librosa.load(input_file, sr=16000)
+        yt, _ = librosa.effects.trim(y, top_db=20)
+        yt = Util.normalize(yt)
+        ws = int(sr * 0.001 * window_size)
+        st = int(sr * 0.001 * stride)
+        if feature == 'fbank':  # log-scaled
+            feat = librosa.feature.melspectrogram(y=yt, sr=sr, n_mels=dim,
+                                                  n_fft=ws, hop_length=st)
+            feat = np.log(feat + 1e-6)
+        elif feature == 'mfcc':
+            feat = librosa.feature.mfcc(y=yt, sr=sr, n_mfcc=dim, n_mels=26,
+                                        n_fft=ws, hop_length=st)
+            feat[0] = librosa.feature.rmse(yt, hop_length=st, frame_length=ws)
+
+        else:
+            raise ValueError('Unsupported Acoustic Feature: ' + feature)
+
+        feat = [feat]
+        if delta:
+            feat.append(librosa.feature.delta(feat[0]))
+
+        if delta_delta:
+            feat.append(librosa.feature.delta(feat[0], order=2))
+        feat = np.concatenate(feat, axis=0)
+        if cmvn:
+            feat = (feat - feat.mean(axis=1)[:, np.newaxis]) / (feat.std(axis=1) + 1e-16)[:, np.newaxis]
+        if save_feature is not None:
+            tmp = np.swapaxes(feat, 0, 1).astype('float32')
+            np.save(save_feature, tmp)
+            return len(tmp)
+        else:
+            return np.swapaxes(feat, 0, 1).astype('float32')
+
+    @staticmethod
+    def spec_augment(spec: np.ndarray, num_mask=2, freq_masking=0.15, time_masking=0.20, value=0):
+        spec = spec.copy()
+        num_mask = random.randint(1, num_mask)
+        for i in range(num_mask):
+            all_freqs_num, all_frames_num = spec.shape
+            freq_percentage = random.uniform(0.0, freq_masking)
+
+            num_freqs_to_mask = int(freq_percentage * all_freqs_num)
+            f0 = np.random.uniform(low=0.0, high=all_freqs_num - num_freqs_to_mask)
+            f0 = int(f0)
+            spec[f0:f0 + num_freqs_to_mask, :] = value
+
+            time_percentage = random.uniform(0.0, time_masking)
+
+            num_frames_to_mask = int(time_percentage * all_frames_num)
+            t0 = np.random.uniform(low=0.0, high=all_frames_num - num_frames_to_mask)
+            t0 = int(t0)
+            spec[:, t0:t0 + num_frames_to_mask] = value
+
+        return spec
+
+    @staticmethod
+    def build_LFR_features(inputs, m, n):
+        """
+        Actually, this implements stacking frames and skipping frames.
+        if m = 1 and n = 1, just return the origin features.
+        if m = 1 and n > 1, it works like skipping.
+        if m > 1 and n = 1, it works like stacking but only support right frames.
+        if m > 1 and n > 1, it works like LFR.
+        Args:
+            inputs_batch: inputs is T x D np.ndarray
+            m: number of frames to stack
+            n: number of frames to skip
+        """
+        # LFR_inputs_batch = []
+        # for inputs in inputs_batch:
+        LFR_inputs = []
+        T = inputs.shape[0]
+        T_lfr = int(np.ceil(T / n))
+        for i in range(T_lfr):
+            if m <= T - i * n:
+                LFR_inputs.append(np.hstack(inputs[i * n:i * n + m]))
+            else:  # process last LFR frame
+                num_padding = m - (T - i * n)
+                frame = np.hstack(inputs[i * n:])
+                for _ in range(num_padding):
+                    frame = np.hstack((frame, inputs[-1]))
+                LFR_inputs.append(frame)
+
+        return np.vstack(LFR_inputs)
+
+    @staticmethod
+    def pad_collate(batch):
+        max_input_len = float('-inf')
+        max_target_len = float('-inf')
+
+        for elem in batch:
+            feature, trn = elem
+            max_input_len = max_input_len if max_input_len > feature.shape[0] else feature.shape[0]
+            max_target_len = max_target_len if max_target_len > len(trn) else len(trn)
+
+        for i, elem in enumerate(batch):
+            feature, trn = elem
+            input_length = feature.shape[0]
+            input_dim = feature.shape[1]
+            padded_input = np.zeros((max_input_len, input_dim), dtype=np.float32)
+            padded_input[:input_length, :] = feature
+            padded_target = np.pad(trn, (0, max_target_len - len(trn)), 'constant', constant_values=IGNORE_ID)
+            batch[i] = (padded_input, padded_target, input_length)
+
+        # sort it by input lengths (long to short)
+        batch.sort(key=lambda x: x[2], reverse=True)
+
+        return default_collate(batch)
+
+    @staticmethod
+    def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, loss, is_best):
+        state = {'epoch': epoch,
+                 'epochs_since_improvement': epochs_since_improvement,
+                 'loss': loss,
+                 'model': model,
+                 'optimizer': optimizer}
+
+        filename = 'checkpoint.tar'
+        torch.save(state, filename)
+        # If this checkpoint is the best so far, store a copy so it doesn't get overwritten by a worse checkpoint
+        if is_best:
+            torch.save(state, 'BEST_checkpoint.tar')
+
 
 class TransformerOptimizer(object):
     """A simple wrapper class for learning rate scheduling"""
@@ -260,3 +435,49 @@ class TransformerOptimizer(object):
                                               self.step_num * (self.warmup_steps ** (-1.5)))
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr
+
+
+class AiShellDataset(Dataset):
+    def __init__(self, args, samples, vocab):
+        self.args = args
+        self.samples = samples
+        self.vocab = vocab
+
+        print('loading {} samples...'.format(len(self.samples)))
+
+    def __getitem__(self, i):
+        sample = self.samples[i]
+        wave = os.path.join(self.args.wav_dir, sample['wav'])
+        trn = [self.vocab[i] for i in sample['trn']]
+
+        feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
+        # zero mean and unit variance
+        feature = (feature - feature.mean()) / feature.std()
+        feature = Util.spec_augment(feature)
+        feature = Util.build_LFR_features(feature, m=self.args.LFR_m, n=self.args.LFR_n)
+
+        return feature, trn
+
+    def __len__(self):
+        return len(self.samples)
+
+
+class AverageMeter(object):
+    """
+    Keeps track of most recent, average, sum, and count of a metric.
+    """
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count

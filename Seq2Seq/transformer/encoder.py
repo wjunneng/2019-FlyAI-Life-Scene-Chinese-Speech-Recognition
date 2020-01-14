@@ -1,4 +1,8 @@
 # -*- coding:utf-8 -*-
+import os
+import sys
+
+os.chdir(sys.path[0])
 import torch.nn as nn
 
 from Seq2Seq.Utils.util import Util
