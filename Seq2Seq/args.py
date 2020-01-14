@@ -13,6 +13,8 @@ wav_dir = os.path.join(os.getcwd(), 'data/input')
 log_dir = os.path.join(os.getcwd(), 'data/log')
 # 字典保存路径
 vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
+# 输出路径
+output_dir = os.path.join(os.getcwd(), 'data/output')
 
 EPOCHS = 10
 BATCH = 4

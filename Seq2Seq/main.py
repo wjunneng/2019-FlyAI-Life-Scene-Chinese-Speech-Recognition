@@ -99,7 +99,8 @@ class Instructor(object):
         # Epochs
         for epoch in range(0, self.args.EPOCHS):
             # One epoch's training
-            model.train()  # train mode (dropout and batchnorm is used)
+            # train mode (dropout and batchnorm is used)
+            model.train()
 
             losses = AverageMeter()
 
@@ -172,7 +173,8 @@ class Instructor(object):
                 epochs_since_improvement = 0
 
             # Save checkpoint
-            Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
+            Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best,
+                                 output_dir=self.args.output_dir)
 
     def run(self):
         train_audio_paths, train_labels, dev_audio_paths, dev_labels = self.generate()
