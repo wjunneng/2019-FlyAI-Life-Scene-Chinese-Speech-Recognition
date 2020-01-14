@@ -14,6 +14,8 @@ log_dir = os.path.join(os.getcwd(), 'data/log')
 # 字典保存路径
 vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
 
+EPOCHS = 10
+BATCH = 4
 # --------------------------------------------------Low Frame Rate (stacking and skipping frames)
 # Low Frame Rate: number of frames to stack
 LFR_m = 4
@@ -52,23 +54,15 @@ tgt_emb_prj_weight_sharing = 1
 # label smoothing
 label_smoothing = 0.1
 
-# --------------------------------------------------Training config
-# Number of maximum epochs
-epochs = 50
-
 # --------------------------------------------------minibatch
 # reshuffle the data at every epoch
 shuffle = 1
-# Batch size
-batch_size = 8
 # Batch frames. If this is not 0, batch size will make no sense
 batch_frames = 0
 # Batch size is reduced if the input sequence length > ML
 maxlen_in = 800
 # Batch size is reduced if the output sequence length > ML
 maxlen_out = 150
-# Number of workers to generate minibatch
-num_workers = 4
 
 # --------------------------------------------------optimizer
 # learning rate
@@ -101,4 +95,4 @@ eos_id = 1
 # clip gradients at an absolute value of
 grad_clip = 5.
 # print training/validation stats  every __ batches
-print_freq = 100
+print_freq = 5

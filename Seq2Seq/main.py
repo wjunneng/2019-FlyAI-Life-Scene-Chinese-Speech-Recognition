@@ -87,16 +87,17 @@ class Instructor(object):
                                        vocab=vocab,
                                        samples=[{'wav': i, 'trn': j} for (i, j) in
                                                 zip(train_audio_paths, train_labels)])
-        train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, collate_fn=Util.pad_collate,
-                                  pin_memory=True, shuffle=True, num_workers=self.args.num_workers)
+        train_loader = DataLoader(train_dataset, batch_size=self.args.BATCH, collate_fn=Util.pad_collate,
+                                  pin_memory=True, shuffle=True, num_workers=0)
+
         valid_dataset = AiShellDataset(args=self.args,
                                        vocab=vocab,
                                        samples=[{'wav': i, 'trn': j} for (i, j) in zip(dev_audio_paths, dev_labels)])
-        valid_loader = DataLoader(valid_dataset, batch_size=self.args.batch_size, collate_fn=Util.pad_collate,
-                                  pin_memory=True, shuffle=False, num_workers=self.args.num_workers)
+        valid_loader = DataLoader(valid_dataset, batch_size=self.args.BATCH, collate_fn=Util.pad_collate,
+                                  pin_memory=True, shuffle=False, num_workers=0)
 
         # Epochs
-        for epoch in range(0, self.args.epochs):
+        for epoch in range(0, self.args.EPOCHS):
             # One epoch's training
             model.train()  # train mode (dropout and batchnorm is used)
 
@@ -180,7 +181,7 @@ class Instructor(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASR')
-    parser.add_argument("-e", '--EPOCHS', default=10, type=int, help='train epochs')
+    parser.add_argument("-e", '--EPOCHS', default=4, type=int, help='train epochs')
     parser.add_argument('-b', '--BATCH', default=4, type=int, help='batch size')
     config = parser.parse_args()
 

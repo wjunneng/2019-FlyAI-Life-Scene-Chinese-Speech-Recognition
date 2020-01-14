@@ -443,12 +443,10 @@ class AiShellDataset(Dataset):
         self.samples = samples
         self.vocab = vocab
 
-        print('loading {} samples...'.format(len(self.samples)))
-
     def __getitem__(self, i):
         sample = self.samples[i]
         wave = os.path.join(self.args.wav_dir, sample['wav'])
-        trn = [self.vocab[i] for i in sample['trn']]
+        trn = [self.vocab[i] if i in self.vocab.keys() else -1 for i in sample['trn']]
 
         feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
         # zero mean and unit variance
