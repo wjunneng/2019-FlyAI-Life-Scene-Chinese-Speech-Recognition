@@ -45,6 +45,7 @@ class Instructor(object):
         # wav文件路径
         audio_paths = [i['audio_path'] for i in audio_paths]
         # waw文本数据 TODO：此处包含空格, 测试去掉空格能否提升模型性能
+        # labels = [[j for j in list(i['label']) if j != ''] for i in labels]
         labels = [list(i['label']) for i in labels]
 
         # 构建字典
@@ -171,8 +172,8 @@ class Instructor(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASR')
-    parser.add_argument("-e", '--EPOCHS', default=10, type=int, help='train epochs')
-    parser.add_argument('-b', '--BATCH', default=4, type=int, help='batch size')
+    parser.add_argument("-e", '--EPOCHS', default=100, type=int, help='train epochs')
+    parser.add_argument('-b', '--BATCH', default=10, type=int, help='batch size')
     config = parser.parse_args()
 
     args.EPOCHS = config.EPOCHS

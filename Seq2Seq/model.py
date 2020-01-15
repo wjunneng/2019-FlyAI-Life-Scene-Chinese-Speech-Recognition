@@ -23,7 +23,8 @@ class Model(Base):
 
     def predict(self, **data):
         audio_path = self.dataset.predict_data(**data)[0]
-        feature = Util.extract_feature(input_file=audio_path, feature='fbank', dim=self.args.input_dim, cmvn=True)
+        feature = Util.extract_feature(input_file=audio_path, feature=self.args.feature_type, dim=self.args.input_dim,
+                                       cmvn=True)
         feature = Util.build_LFR_features(feature, m=self.args.LFR_m, n=self.args.LFR_n)
         input = torch.from_numpy(feature).to(DEVICE)
         input_length = [input[0].shape[0]]

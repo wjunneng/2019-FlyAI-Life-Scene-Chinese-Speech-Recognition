@@ -292,13 +292,11 @@ class Util(object):
         ws = int(sr * 0.001 * window_size)
         st = int(sr * 0.001 * stride)
         if feature == 'fbank':  # log-scaled
-            feat = librosa.feature.melspectrogram(y=yt, sr=sr, n_mels=dim,
-                                                  n_fft=ws, hop_length=st)
+            feat = librosa.feature.melspectrogram(y=yt, sr=sr, n_mels=dim, n_fft=ws, hop_length=st)
             feat = np.log(feat + 1e-6)
         elif feature == 'mfcc':
-            feat = librosa.feature.mfcc(y=yt, sr=sr, n_mfcc=dim, n_mels=26,
-                                        n_fft=ws, hop_length=st)
-            feat[0] = librosa.feature.rmse(yt, hop_length=st, frame_length=ws)
+            feat = librosa.feature.mfcc(y=yt, sr=sr, n_mfcc=dim, n_mels=dim, n_fft=ws, hop_length=st)
+            feat[0] = librosa.feature.rms(yt, hop_length=st, frame_length=ws)
 
         else:
             raise ValueError('Unsupported Acoustic Feature: ' + feature)
@@ -453,7 +451,7 @@ class AiShellDataset(Dataset):
         sample = self.samples[i]
         wave = os.path.join(self.args.wav_dir, sample['wav'])
 
-        feature = Util.extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
+        feature = Util.extract_feature(input_file=wave, feature=self.args.feature_type, dim=self.args.d_input, cmvn=True)
         # zero mean and unit variance
         feature = (feature - feature.mean()) / feature.std()
         feature = Util.spec_augment(feature)

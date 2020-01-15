@@ -4,9 +4,6 @@ import sys
 
 os.chdir(sys.path[0])
 
-# 模型类型
-model_name = 'Seq2Seq'
-
 # wav 路径
 wav_dir = os.path.join(os.getcwd(), 'data/input')
 # 日志路径
@@ -17,7 +14,9 @@ vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
 output_dir = os.path.join(os.getcwd(), 'data/output')
 
 EPOCHS = 10
-BATCH = 4
+BATCH = 10
+model_name = 'Seq2Seq'
+feature_type = 'mfcc'
 # --------------------------------------------------Low Frame Rate (stacking and skipping frames)
 # Low Frame Rate: number of frames to stack
 LFR_m = 4
@@ -26,7 +25,7 @@ LFR_n = 3
 
 # --------------------------------------------------encoder
 # Dim of encoder input (before LFR)
-d_input = 80
+d_input = 100
 # Number of encoder stacks
 n_layers_enc = 6
 # Number of Multi Head Attention (MHA)
@@ -68,7 +67,7 @@ maxlen_out = 150
 
 # --------------------------------------------------optimizer
 # learning rate
-lr = 0.001
+lr = 0.0001
 # tunable scalar multiply to learning rate
 k = 0.2
 # warmup steps
@@ -76,7 +75,7 @@ warmup_steps = 4000
 
 # --------------------------------------------------Model parameters
 # dimension of feature
-input_dim = 80
+input_dim = 100
 # window size for FFT (ms)
 window_size = 25
 # window stride for FFT (ms)
@@ -103,6 +102,6 @@ print_freq = 5
 # Beam size
 beam_size = 5
 # Nbest size
-nbest = 1
+nbest = 5
 # Max output length. If ==0 (default), it uses a end-detect function to automatically find maximum hypothesis lengths
 decode_max_len = 100
