@@ -1,3 +1,4 @@
 flyai
 tqdm
 librosa
+pypinyin
