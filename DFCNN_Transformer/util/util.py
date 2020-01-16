@@ -5,7 +5,13 @@ import sys
 os.chdir(sys.path[0])
 
 import pickle
+import numpy as np
+import pandas as pd
 from collections import OrderedDict
+import tensorflow as tf
+from keras import backend
+
+from DFCNN_Transformer import args
 
 
 class SortedByCountsDict(object):
@@ -64,3 +70,36 @@ class SortedByCountsDict(object):
             self.vocab = pickle.load(file=file)
 
         return self.vocab
+
+
+class Util(object):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_acoustic_vocab_list():
+        text = pd.read_table(args.mixdict_dir, header=None)
+        symbol_list = text.iloc[:, 0].tolist()
+        symbol_list.append('_')
+
+        return len(symbol_list), symbol_list
+
+    @staticmethod
+    def decode_ctc(num_result, input_length):
+        """
+        定义解码器
+        :param num_result:
+        :param input_length:
+        :return:
+        """
+
+        result = num_result[:, :, :]
+        in_len = np.zeros(1, dtype=np.int32)
+        in_len[0] = input_length
+        r = backend.ctc_decode(result, in_len, greedy=True, beam_width=100, top_paths=1)
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
+        r1 = r[0][0].eval(session=tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)))
+        tf.reset_default_graph()  # 然后重置tf图，这句很关键
+        r1 = r1[0]
+
+        return r1

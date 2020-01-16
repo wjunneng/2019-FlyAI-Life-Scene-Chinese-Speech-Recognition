@@ -6,9 +6,9 @@ os.chdir(sys.path[0])
 import torch
 from flyai.model.base import Base
 
-from Seq2Seq import args
-from Seq2Seq.Utils.util import SortedByCountsDict
-from Seq2Seq.Utils.util import Util
+from DFCNN_Transformer import args
+from DFCNN_Transformer.util.util import SortedByCountsDict
+from DFCNN_Transformer.util.util import Util
 
 DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

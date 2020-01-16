@@ -7,14 +7,14 @@ import argparse
 import logging
 import torch
 import random
-from pypinyin import pinyin, Style
+import shutil
 import numpy as np
-from time import strftime
-from time import localtime
-from Seq2Seq import args
+from time import strftime, localtime
+from pypinyin import pinyin, Style
 from flyai.dataset import Dataset
 
-from Seq2Seq.Utils.util import SortedByCountsDict
+from DFCNN_Transformer import args
+from DFCNN_Transformer.util.util import SortedByCountsDict
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -31,8 +31,6 @@ class Instructor(object):
     def __init__(self, args):
         self.args = args
         self.sortedDict = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir)
-
-        self.run()
 
     def generate(self):
         self.data = Dataset(epochs=self.args.EPOCHS, batch=self.args.BATCH, val_batch=self.args.BATCH)
@@ -75,6 +73,15 @@ class Instructor(object):
         pass
 
     def run(self):
+        # 拷贝文件
+        for name, after_dir in zip(['dict.txt', 'hanzi.txt', 'mixdict.txt'],
+                                   [self.args.dict_dir, self.args.hanzi_dir, self.args.mixdict_dir]):
+            before_dir = os.path.join(os.getcwd(), 'attach_data', name)
+            logger.info('>>>name:{}'.format(name))
+            logger.info('>before_dir:{}'.format(before_dir))
+            logger.info('>after_dir:{}'.format(after_dir))
+            shutil.copyfile(before_dir, after_dir)
+
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
         logger.info('run end!')
 
