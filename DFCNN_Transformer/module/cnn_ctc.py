@@ -13,19 +13,19 @@ from keras.models import Model
 from keras.utils import multi_gpu_model
 
 from DFCNN_Transformer.util.util import Util
-from DFCNN_Transformer import args
 
 
 class CNNCTCModel(object):
-    def __init__(self, args):
+    def __init__(self, args, vocab_size):
         # 神经网络最终输出的每一个字符向量维度的大小
-        self.vocab_size, _ = Util.get_acoustic_vocab_list()
-        self.gpu_nums = args.gpu_nums
-        self.lr = args.lr
-        self.feature_length = 200
-        self.is_training = args.is_training
-        self._model_init()
+        self.vocab_size = vocab_size
+        self.gpu_nums = args.am_gpu_nums
+        self.lr = args.am_lr
+        self.feature_length = args.am_feature_dim
+        self.is_training = args.am_is_training
+        self.AmModelFolder = args.AmModelFolder
 
+        self._model_init()
         if self.is_training:
             self._ctc_init()
             self.opt_init()
@@ -95,12 +95,12 @@ class CNNCTCModel(object):
         return Util.decode_ctc(pred, length)
 
     def load_model(self, model):
-        self.ctc_model.load_weights(args.AmModelFolder + model + '.hdf5')
+        self.ctc_model.load_weights(self.AmModelFolder + model + '.hdf5')
 
     def save_model(self, model):
-        if os.path.exists(args.AmModelFolder) is False:
-            os.mkdir(args.AmModelFolder)
-        self.ctc_model.save_weights(args.AmModelFolder + model + '.hdf5')
+        if os.path.exists(self.AmModelFolder) is False:
+            os.mkdir(self.AmModelFolder)
+        self.ctc_model.save_weights(self.AmModelFolder + model + '.hdf5')
 
     # ============================模型组件=================================
     @staticmethod

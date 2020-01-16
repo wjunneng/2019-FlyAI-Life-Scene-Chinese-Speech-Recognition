@@ -2,3 +2,4 @@ flyai
 tqdm
 librosa
 pypinyin
+python_speech_features

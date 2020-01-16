@@ -8,13 +8,16 @@ import logging
 import torch
 import random
 import shutil
+import keras
 import numpy as np
 from time import strftime, localtime
 from pypinyin import pinyin, Style
 from flyai.dataset import Dataset
+from keras.callbacks import ModelCheckpoint
 
 from DFCNN_Transformer import args
-from DFCNN_Transformer.util.util import SortedByCountsDict
+from DFCNN_Transformer.util.util import SortedByCountsDict, Util, DataGenerator
+from DFCNN_Transformer.module.cnn_ctc import CNNCTCModel
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -69,8 +72,46 @@ class Instructor(object):
 
         return train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins
 
-    def train(self, train_audio_paths, train_labels, dev_audio_paths, dev_labels):
-        pass
+    def train_am(self, train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins):
+        """
+        训练声学模型
+        :param train_audio_paths:
+        :param train_labels:
+        :param train_pinyins:
+        :param dev_audio_paths:
+        :param dev_labels:
+        :param dev_pinyins:
+        :return:
+        """
+        vocab_size, acoustic_vocab = Util.get_acoustic_vocab_list()
+
+        model = CNNCTCModel(args=self.args, vocab_size=vocab_size)
+
+        hp = self.args
+        hp.batch_size = self.args.am_batch_size
+        hp.epochs = self.args.am_epochs
+        hp.data_path = self.args.wav_dir
+        hp.data_type = 'train'
+        train_generator = DataGenerator(audio_paths=train_audio_paths, labels=train_labels, pinyins=train_pinyins,
+                                        hp=hp, acoustic_vocab=acoustic_vocab)
+        hp.data_type = 'dev'
+        dev_generator = DataGenerator(audio_paths=dev_audio_paths, labels=dev_labels, pinyins=dev_pinyins,
+                                      hp=self.args, acoustic_vocab=acoustic_vocab)
+        ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
+        cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, ckpt), verbose=1, save_best_only=True)
+        tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
+                                                 write_graph=True,
+                                                 write_images=True, update_freq='epoch')
+
+        model.ctc_model.fit_generator(generator=train_generator,
+                                      steps_per_epoch=len(train_pinyins) // hp.batch_size,
+                                      validation_data=dev_generator,
+                                      validation_steps=20,
+                                      epochs=hp.epochs,
+                                      workers=10,
+                                      use_multiprocessing=True,
+                                      callbacks=[cpCallBack, tbCallBack]
+                                      )
 
     def run(self):
         # 拷贝文件
@@ -83,6 +124,7 @@ class Instructor(object):
             shutil.copyfile(before_dir, after_dir)
 
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
+        self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
         logger.info('run end!')
 
 

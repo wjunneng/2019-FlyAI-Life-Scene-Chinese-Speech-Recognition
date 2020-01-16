@@ -25,6 +25,20 @@ mixdict_dir = os.path.join(os.getcwd(), 'data/mixdict.txt')
 
 # 声学模型文件路径
 AmModelFolder = os.path.join('data/output/am')
+AmModelTensorBoard = os.path.join('data/output/am')
 
 # 随机种子
 seed = 42
+# 是否打乱数据
+shuffle = True
+
+# 声学模型参数
+am_lr = 0.001
+am_gpu_nums = 1
+am_is_training = True
+am_batch_size = 4
+am_epochs = 100
+am_feature_dim = 200
+am_feature_max_length = 1600    # 最大帧数
+
+
