@@ -14,6 +14,15 @@ from time import strftime, localtime
 from pypinyin import pinyin, Style
 from flyai.dataset import Dataset
 from keras.callbacks import ModelCheckpoint
+import warnings
+
+warnings.filterwarnings('ignore')
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 from DFCNN_Transformer import args
 from DFCNN_Transformer.util.util import SortedByCountsDict, Util, DataGenerator
@@ -70,7 +79,7 @@ class Instructor(object):
         train_pinyins, dev_pinyins = audio_pinyins[index[0:int(len(index) * 0.9)]], audio_pinyins[
             index[int(len(index) * 0.9):]]
 
-        return train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins
+        return train_audio_paths.tolist(), train_labels.tolist(), train_pinyins.tolist(), dev_audio_paths.tolist(), dev_labels.tolist(), dev_pinyins.tolist()
 
     def train_am(self, train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins):
         """
@@ -92,18 +101,24 @@ class Instructor(object):
         hp.epochs = self.args.am_epochs
         hp.data_path = self.args.wav_dir
         hp.data_type = 'train'
+        hp.feature_max_length = hp.am_feature_max_length
         train_generator = DataGenerator(audio_paths=train_audio_paths, labels=train_labels, pinyins=train_pinyins,
                                         hp=hp, acoustic_vocab=acoustic_vocab)
         hp.data_type = 'dev'
         dev_generator = DataGenerator(audio_paths=dev_audio_paths, labels=dev_labels, pinyins=dev_pinyins,
-                                      hp=self.args, acoustic_vocab=acoustic_vocab)
+                                      hp=hp, acoustic_vocab=acoustic_vocab)
         ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
         cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, ckpt), verbose=1, save_best_only=True)
         tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
                                                  write_graph=True,
                                                  write_images=True, update_freq='epoch')
 
-        model.ctc_model.fit_generator(generator=train_generator,
+        select_model = '0'
+        if os.path.exists(hp.AmModelFolder + select_model + '.hdf5'):
+            print('load acoustic model...')
+            model.load_model(select_model)
+
+        model.ctc_model.fit_generator(train_generator,
                                       steps_per_epoch=len(train_pinyins) // hp.batch_size,
                                       validation_data=dev_generator,
                                       validation_steps=20,

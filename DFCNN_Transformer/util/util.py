@@ -87,7 +87,7 @@ class DataGenerator(Sequence):
         self.shuffle = hp.shuffle
         self.data_path = hp.data_path
         self.batch_size = hp.batch_size
-        self.feature_max_length = hp.am_feature_max_length
+        self.feature_max_length = hp.feature_max_length
         self.indexes = np.arange(len(self.paths))
         self.acoustic_vocab = acoustic_vocab
 
