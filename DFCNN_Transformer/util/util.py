@@ -158,7 +158,6 @@ class DataGenerator(Sequence):
                   'label_length': label_length,
                   }
         outputs = {'ctc': np.zeros((self.batch_size - len(error_count), 1), dtype=np.float32)}
-
         return inputs, outputs
 
 
@@ -203,7 +202,7 @@ class Util(object):
         :return:
         """
         try:
-            line.strip().split(' ')
+            line = line.strip().split(' ')
 
             return [vocab.index(pin) for pin in line]
         except ValueError:

@@ -4,8 +4,8 @@ import sys
 
 os.chdir(sys.path[0])
 
-EPOCHS = 10
-BATCH = 10
+EPOCHS = 20
+BATCH = 5
 model_name = 'DFCNN_Transformer'
 
 # wav 路径

@@ -110,8 +110,7 @@ class Instructor(object):
         ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
         cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, ckpt), verbose=1, save_best_only=True)
         tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
-                                                 write_graph=True,
-                                                 write_images=True, update_freq='epoch')
+                                                 write_graph=True, write_images=True, update_freq='epoch')
 
         select_model = '0'
         if os.path.exists(hp.AmModelFolder + select_model + '.hdf5'):
@@ -123,8 +122,8 @@ class Instructor(object):
                                       validation_data=dev_generator,
                                       validation_steps=20,
                                       epochs=hp.epochs,
-                                      workers=10,
-                                      use_multiprocessing=True,
+                                      workers=1,
+                                      use_multiprocessing=False,
                                       callbacks=[cpCallBack, tbCallBack]
                                       )
 
@@ -145,8 +144,8 @@ class Instructor(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASR')
-    parser.add_argument("-e", '--EPOCHS', default=100, type=int, help='train epochs')
-    parser.add_argument('-b', '--BATCH', default=10, type=int, help='batch size')
+    parser.add_argument("-e", '--EPOCHS', default=20, type=int, help='train epochs')
+    parser.add_argument('-b', '--BATCH', default=5, type=int, help='batch size')
     config = parser.parse_args()
 
     args.EPOCHS = config.EPOCHS
