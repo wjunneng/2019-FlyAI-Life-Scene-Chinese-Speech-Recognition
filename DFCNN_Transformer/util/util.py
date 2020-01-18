@@ -448,7 +448,7 @@ class Util(object):
         :param wav_file: 文件路径
         :return: feature向量
         """
-        feature = logfbank(signal, sample_rate, nfilt=nfilt)
+        feature = logfbank(signal=signal, samplerate=sample_rate, nfilt=nfilt, nfft=2048)
         feature = preprocessing.scale(feature)
 
         return feature
@@ -467,13 +467,14 @@ class Util(object):
             begin = k * args.batch_size
             end = begin + args.batch_size
             index_list = shuffle_list[begin:end]
-            max_len = max([len(pny_lst[index]) for index in index_list])
+            # max_len = max([len(pny_lst[index]) for index in index_list])
+            max_len = args.max_len
             input_data = []
             label_data = []
             for i in index_list:
                 try:
-                    py_vec = Util.pny2id(pny_lst[i], acoustic_vocab) \
-                             + [0] * (max_len - len(pny_lst[i].strip().split(' ')))
+                    py_vec = Util.pny2id(pny_lst[i], acoustic_vocab) + [0] * (
+                            max_len - len(pny_lst[i].strip().split(' ')))
                     han_vec = Util.han2id(han_lst[i], language_vocab, args.PAD_FLAG, args.SOS_FLAG, args.EOS_FLAG,
                                           args.PAD, args.SOS, args.EOS) + [0] * (max_len - len(han_lst[i].strip()))
                     input_data.append(py_vec)

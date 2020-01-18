@@ -3,6 +3,11 @@ import os
 import sys
 
 os.chdir(sys.path[0])
+import warnings
+
+warnings.filterwarnings('ignore')
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import argparse
 import logging
 import torch
@@ -14,9 +19,6 @@ from time import strftime, localtime
 from pypinyin import pinyin, Style
 from flyai.dataset import Dataset
 from keras.callbacks import ModelCheckpoint
-import warnings
-
-warnings.filterwarnings('ignore')
 import tensorflow as tf
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -129,10 +131,9 @@ class Instructor(object):
                                       callbacks=[cpCallBack, tbCallBack]
                                       )
 
-    def train_lm(self, train_audio_paths, train_labels, train_pinyins):
+    def train_lm(self, train_labels, train_pinyins):
         """
         训练语言学模型
-        :param train_audio_paths:
         :param train_labels:
         :param train_pinyins:
         :param dev_audio_paths:
@@ -144,6 +145,7 @@ class Instructor(object):
         hp.batch_size = self.args.lm_batch_size
         hp.epochs = self.args.lm_epochs
         hp.data_type = 'train'
+        hp.max_len = self.args.lm_max_len
         hp.hidden_units = self.args.lm_hidden_units
         hp.is_training = self.args.lm_is_training
         hp.feature_dim = self.args.lm_feature_dim
@@ -181,6 +183,9 @@ class Instructor(object):
                 for i in range(batch_num):
                     input_batch, label_batch = next(batch)
                     feed = {lm_model.x: input_batch, lm_model.y: label_batch}
+                    print('input_batch:{}'.format(input_batch))
+                    print('label_batch:{}'.format(label_batch))
+                    print('len:{}'.format(len(label_batch)))
                     cost, _ = sess.run([lm_model.mean_loss, lm_model.train_op], feed_dict=feed)
                     total_loss += cost
                     if i % 10 == 0:
@@ -204,9 +209,13 @@ class Instructor(object):
             shutil.copyfile(before_dir, after_dir)
 
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
-        # self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
-        self.train_lm(train_audio_paths, train_labels, train_pinyins)
-        logger.info('run end!')
+        logger.info('start train am model!')
+        self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
+        logger.info('end train am model!')
+
+        logger.info('start train lm model!')
+        self.train_lm(train_labels=train_labels, train_pinyins=train_pinyins)
+        logger.info('end train lm model!')
 
 
 if __name__ == '__main__':

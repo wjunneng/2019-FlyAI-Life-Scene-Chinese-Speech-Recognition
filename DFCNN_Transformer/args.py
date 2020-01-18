@@ -13,7 +13,7 @@ wav_dir = os.path.join(os.getcwd(), 'data/input')
 # 日志路径
 log_dir = os.path.join(os.getcwd(), 'data/log')
 # 输出路径
-output_dir = os.path.join(os.getcwd(), 'data/output')
+# output_dir = os.path.join(os.getcwd(), 'data/output')
 # 字典保存路径
 vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
 # dict.txt
@@ -46,6 +46,7 @@ am_feature_dim = 200
 am_feature_max_length = 1600  # 最大帧数
 
 # 语音模型参数
+lm_max_len = 48
 lm_batch_size = 5
 lm_epochs = 10
 lm_feature_dim = 200
