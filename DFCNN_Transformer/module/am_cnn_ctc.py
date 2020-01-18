@@ -95,12 +95,12 @@ class CNNCTCModel(object):
         return Util.decode_ctc(pred, length)
 
     def load_model(self, model):
-        self.ctc_model.load_weights(self.AmModelFolder + model + '.hdf5')
+        self.ctc_model.load_weights(model)
 
     def save_model(self, model):
         if os.path.exists(self.AmModelFolder) is False:
             os.mkdir(self.AmModelFolder)
-        self.ctc_model.save_weights(self.AmModelFolder + model + '.hdf5')
+        self.ctc_model.save_weights(self.AmModelFolder + model)
 
     # ============================模型组件=================================
     @staticmethod

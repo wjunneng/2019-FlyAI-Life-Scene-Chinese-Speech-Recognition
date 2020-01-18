@@ -7,7 +7,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import argparse
 import logging
 import torch
@@ -111,8 +111,8 @@ class Instructor(object):
         hp.data_type = 'dev'
         dev_generator = DataGenerator(audio_paths=dev_audio_paths, labels=dev_labels, pinyins=dev_pinyins,
                                       hp=hp, acoustic_vocab=self.acoustic_vocab)
-        ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
-        cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, ckpt), verbose=1, save_best_only=True)
+        # ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
+        cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, hp.am_ckpt), verbose=1, save_best_only=True)
         tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
                                                  write_graph=True, write_images=True, update_freq='epoch')
 
@@ -183,9 +183,6 @@ class Instructor(object):
                 for i in range(batch_num):
                     input_batch, label_batch = next(batch)
                     feed = {lm_model.x: input_batch, lm_model.y: label_batch}
-                    print('input_batch:{}'.format(input_batch))
-                    print('label_batch:{}'.format(label_batch))
-                    print('len:{}'.format(len(label_batch)))
                     cost, _ = sess.run([lm_model.mean_loss, lm_model.train_op], feed_dict=feed)
                     total_loss += cost
                     if i % 10 == 0:
@@ -209,9 +206,9 @@ class Instructor(object):
             shutil.copyfile(before_dir, after_dir)
 
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
-        logger.info('start train am model!')
-        self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
-        logger.info('end train am model!')
+        # logger.info('start train am model!')
+        # self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
+        # logger.info('end train am model!')
 
         logger.info('start train lm model!')
         self.train_lm(train_labels=train_labels, train_pinyins=train_pinyins)

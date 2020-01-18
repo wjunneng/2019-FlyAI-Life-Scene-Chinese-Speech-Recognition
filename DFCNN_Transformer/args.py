@@ -12,8 +12,6 @@ model_name = 'DFCNN_Transformer'
 wav_dir = os.path.join(os.getcwd(), 'data/input')
 # 日志路径
 log_dir = os.path.join(os.getcwd(), 'data/log')
-# 输出路径
-# output_dir = os.path.join(os.getcwd(), 'data/output')
 # 字典保存路径
 vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
 # dict.txt
@@ -24,11 +22,13 @@ hanzi_dir = os.path.join(os.getcwd(), 'data/hanzi.txt')
 mixdict_dir = os.path.join(os.getcwd(), 'data/mixdict.txt')
 
 # 声学模型文件路径
-AmModelFolder = os.path.join(os.getcwd(), 'data/output/am')
-AmModelTensorBoard = os.path.join(os.getcwd(), 'data/output/am')
+AmModelFolder = os.path.join(os.getcwd(), 'data/output/am/')
+AmModelTensorBoard = os.path.join(os.getcwd(), 'data/output/am/')
 # 语言学模型文件路径
-LmModelFolder = os.path.join(os.getcwd(), 'data/output/lm')
-LmModelTensorboard = os.path.join(os.getcwd(), 'data/output/lm')
+LmModelFolder = os.path.join(os.getcwd(), 'data/output/lm/')
+LmModelTensorboard = os.path.join(os.getcwd(), 'data/output/lm/')
+# 预测结果保存路径
+PredResultFolder = os.path.join(os.getcwd(), 'data/predict/')
 
 # 随机种子
 seed = 42
@@ -39,6 +39,7 @@ shuffle = True
 am_batch_size = 5
 am_epochs = 10
 
+am_ckpt = "am_model.hdf5"
 am_lr = 0.001
 am_gpu_nums = 1
 am_is_training = True

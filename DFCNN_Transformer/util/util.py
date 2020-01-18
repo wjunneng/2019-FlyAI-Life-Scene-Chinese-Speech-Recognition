@@ -4,6 +4,7 @@ import sys
 
 os.chdir(sys.path[0])
 
+import difflib
 import pickle
 import math
 import numpy as np
@@ -485,3 +486,62 @@ class Util(object):
             label_data = np.array(label_data)
             yield input_data, label_data
         pass
+
+    @staticmethod
+    def predict_pinyin(model, inputs, input_length, acoustic_vocab):
+        predict = model.predict(inputs, input_length)
+        text = []
+        for k in predict:
+            text.append(acoustic_vocab[k])
+
+        return predict, ' '.join(text)
+
+    @staticmethod
+    def GetEditDistance(str1, str2):
+        """
+        计算字错误率
+        :param str1:
+        :param str2:
+        :return:
+        """
+        leven_cost = 0
+        s = difflib.SequenceMatcher(None, str1, str2)
+        for tag, i1, i2, j1, j2 in s.get_opcodes():
+            if tag == 'replace':
+                leven_cost += max(i2 - i1, j2 - j1)
+            elif tag == 'insert':
+                leven_cost += (j2 - j1)
+            elif tag == 'delete':
+                leven_cost += (i2 - i1)
+        return leven_cost
+
+    # @staticmethod
+    # def get_fbank_and_pinyin_data(file, acoustic_vocab):
+    #     """
+    #     获取一条语音数据的Fbank与拼音信息
+    #     :param index: 索引位置
+    #     :return:
+    #         input_data: 语音特征数据
+    #         data_length: 语音特征数据长度
+    #         label: 语音标签的向量
+    #         acoustic_vocab: 字典
+    #     """
+    #     try:
+    #         # Fbank特征提取函数(从feature_python)
+    #         fbank = None
+    #         if os.path.isfile(file):
+    #             fbank = Util.compute_fbank_from_file(file)
+    #
+    #         input_data = fbank.reshape([fbank.shape[0], fbank.shape[1], 1])
+    #         data_length = input_data.shape[0] // 8 + 1
+    #         label = Util.pny2id(self.pny_lst[index], acoustic_vocab)
+    #         label = np.array(label)
+    #         len_label = len(label)
+    #         # 将错误数据进行抛出异常,并处理
+    #         if input_data.shape[0] > self.feature_max_length:
+    #             raise ValueError
+    #         if len_label > 64 or len_label > data_length:
+    #             raise ValueError
+    #         return input_data, data_length, label, len_label
+    #     except ValueError:
+    #         raise ValueError
