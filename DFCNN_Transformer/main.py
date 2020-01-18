@@ -17,6 +17,7 @@ from keras.callbacks import ModelCheckpoint
 import warnings
 
 warnings.filterwarnings('ignore')
+import tensorflow as tf
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
@@ -26,7 +27,8 @@ session = InteractiveSession(config=config)
 
 from DFCNN_Transformer import args
 from DFCNN_Transformer.util.util import SortedByCountsDict, Util, DataGenerator
-from DFCNN_Transformer.module.cnn_ctc import CNNCTCModel
+from DFCNN_Transformer.module.am_cnn_ctc import CNNCTCModel
+from DFCNN_Transformer.module.lm_transformer import TransformerModel
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -43,6 +45,8 @@ class Instructor(object):
     def __init__(self, args):
         self.args = args
         self.sortedDict = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir)
+        self.acoustic_vocab_size, self.acoustic_vocab = Util.get_acoustic_vocab_list()
+        self.language_vocab_size, self.language_vocab = Util.get_language_vocab_list()
 
     def generate(self):
         self.data = Dataset(epochs=self.args.EPOCHS, batch=self.args.BATCH, val_batch=self.args.BATCH)
@@ -92,9 +96,7 @@ class Instructor(object):
         :param dev_pinyins:
         :return:
         """
-        vocab_size, acoustic_vocab = Util.get_acoustic_vocab_list()
-
-        model = CNNCTCModel(args=self.args, vocab_size=vocab_size)
+        model = CNNCTCModel(args=self.args, vocab_size=self.acoustic_vocab_size)
 
         hp = self.args
         hp.batch_size = self.args.am_batch_size
@@ -103,10 +105,10 @@ class Instructor(object):
         hp.data_type = 'train'
         hp.feature_max_length = hp.am_feature_max_length
         train_generator = DataGenerator(audio_paths=train_audio_paths, labels=train_labels, pinyins=train_pinyins,
-                                        hp=hp, acoustic_vocab=acoustic_vocab)
+                                        hp=hp, acoustic_vocab=self.acoustic_vocab)
         hp.data_type = 'dev'
         dev_generator = DataGenerator(audio_paths=dev_audio_paths, labels=dev_labels, pinyins=dev_pinyins,
-                                      hp=hp, acoustic_vocab=acoustic_vocab)
+                                      hp=hp, acoustic_vocab=self.acoustic_vocab)
         ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
         cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, ckpt), verbose=1, save_best_only=True)
         tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
@@ -122,10 +124,74 @@ class Instructor(object):
                                       validation_data=dev_generator,
                                       validation_steps=20,
                                       epochs=hp.epochs,
-                                      workers=1,
+                                      workers=10,
                                       use_multiprocessing=False,
                                       callbacks=[cpCallBack, tbCallBack]
                                       )
+
+    def train_lm(self, train_audio_paths, train_labels, train_pinyins):
+        """
+        训练语言学模型
+        :param train_audio_paths:
+        :param train_labels:
+        :param train_pinyins:
+        :param dev_audio_paths:
+        :param dev_labels:
+        :param dev_pinyins:
+        :return:
+        """
+        hp = self.args
+        hp.batch_size = self.args.lm_batch_size
+        hp.epochs = self.args.lm_epochs
+        hp.data_type = 'train'
+        hp.hidden_units = self.args.lm_hidden_units
+        hp.is_training = self.args.lm_is_training
+        hp.feature_dim = self.args.lm_feature_dim
+        hp.num_heads = self.args.lm_num_heads
+        hp.num_blocks = self.args.lm_num_blocks
+        hp.position_max_length = self.args.lm_position_max_length
+        hp.lr = self.args.lm_lr
+        hp.dropout_rate = self.args.lm_dropout_rate
+
+        epochs = hp.epochs
+        lm_model = TransformerModel(arg=hp, acoustic_vocab_size=self.acoustic_vocab_size,
+                                    language_vocab_size=self.language_vocab_size)
+
+        batch_num = len(train_pinyins) // hp.batch_size
+        with lm_model.graph.as_default():
+            saver = tf.train.Saver(max_to_keep=50)
+            config = tf.ConfigProto()
+            # 占用GPU90%的显存
+            config.gpu_options.per_process_gpu_memory_fraction = 0.9
+        with tf.Session(graph=lm_model.graph, config=config) as sess:
+            merged = tf.summary.merge_all()
+            sess.run(tf.global_variables_initializer())
+            add_num = 0
+            if os.path.exists(hp.LmModelFolder):
+                print('loading language model...')
+                latest = tf.train.latest_checkpoint(hp.LmModelFolder)
+                if latest is not None:
+                    add_num = int(latest.split('_')[-2])
+                    saver.restore(sess, latest)
+            writer = tf.summary.FileWriter(hp.LmModelTensorboard, tf.get_default_graph())
+            for k in range(epochs):
+                total_loss = 0
+                batch = Util.get_lm_batch(args=hp, pny_lst=train_pinyins, han_lst=train_labels,
+                                          acoustic_vocab=self.acoustic_vocab, language_vocab=self.language_vocab)
+                for i in range(batch_num):
+                    input_batch, label_batch = next(batch)
+                    feed = {lm_model.x: input_batch, lm_model.y: label_batch}
+                    cost, _ = sess.run([lm_model.mean_loss, lm_model.train_op], feed_dict=feed)
+                    total_loss += cost
+                    if i % 10 == 0:
+                        print("epoch: %d step: %d/%d  train loss=6%f" % (k + 1, i, batch_num, cost))
+                        if i % 5000 == 0:
+                            rs = sess.run(merged, feed_dict=feed)
+                            writer.add_summary(rs, k * batch_num + i)
+                print('epochs', k + 1, ': average loss = ', total_loss / batch_num)
+                saver.save(sess, hp.LmModelFolder + 'model_%d_%.3f.ckpt' % (k + 1 + add_num, total_loss / batch_num))
+            writer.close()
+        pass
 
     def run(self):
         # 拷贝文件
@@ -138,7 +204,8 @@ class Instructor(object):
             shutil.copyfile(before_dir, after_dir)
 
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
-        self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
+        # self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
+        self.train_lm(train_audio_paths, train_labels, train_pinyins)
         logger.info('run end!')
 
 
