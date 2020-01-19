@@ -4,8 +4,6 @@ import sys
 
 os.chdir(sys.path[0])
 
-EPOCHS = 20
-BATCH = 5
 model_name = 'DFCNN_Transformer'
 
 # wav 路径
@@ -36,7 +34,7 @@ seed = 42
 shuffle = True
 
 # 声学模型参数
-am_batch_size = 5
+am_batch_size = 10
 am_epochs = 10
 
 am_ckpt = "am_model.hdf5"
@@ -47,9 +45,11 @@ am_feature_dim = 200
 am_feature_max_length = 1600  # 最大帧数
 
 # 语音模型参数
-lm_max_len = 48
-lm_batch_size = 5
+lm_batch_size = 10
 lm_epochs = 10
+
+lm_ckpt = "lm_model.hdf5"
+lm_max_len = 48
 lm_feature_dim = 200
 lm_num_heads = 8
 lm_num_blocks = 6

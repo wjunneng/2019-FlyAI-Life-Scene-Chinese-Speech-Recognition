@@ -391,7 +391,6 @@ class Util(object):
         :param input_length:
         :return:
         """
-
         result = num_result[:, :, :]
         in_len = np.zeros(1, dtype=np.int32)
         in_len[0] = input_length
@@ -490,6 +489,7 @@ class Util(object):
     @staticmethod
     def predict_pinyin(model, inputs, input_length, acoustic_vocab):
         predict = model.predict(inputs, input_length)
+        print('predict: {}'.format(predict))
         text = []
         for k in predict:
             text.append(acoustic_vocab[k])

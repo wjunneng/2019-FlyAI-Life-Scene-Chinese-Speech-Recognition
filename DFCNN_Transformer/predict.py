@@ -13,16 +13,14 @@ model = Model(data)
 
 p = model.predict_all(
     [{
-        'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18585358.wav'},
+        'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18772660.wav'},
+        {
+            'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18585358.wav'},
         {
             'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18594110.wav'},
         {
             'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18813047.wav'},
         {
-            'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18626711.wav'},
-        {
-            'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18817087.wav'},
-        {
-            'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18813359.wav'}])
+            'audio_path': '/home/wjunneng/Ubuntu/2019-FlyAI-Life-Scene-Chinese-Speech-Recognition/Seq2Seq/data/input/wav/common_voice_zh-CN_18626711.wav'}])
 
 print(p)

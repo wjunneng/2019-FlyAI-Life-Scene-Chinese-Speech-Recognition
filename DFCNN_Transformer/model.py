@@ -149,9 +149,13 @@ class Model(Base):
         signal, sample_rate = sf.read(audio_path)
         fbank = Util.compute_fbank_from_api(signal, sample_rate)
         input_data = fbank.reshape([fbank.shape[0], fbank.shape[1], 1])
+        print('input_data_length:{}'.format(len(input_data)))
         data_length = input_data.shape[0] // 8 + 1
+
         predict, pinyin = Util.predict_pinyin(model=am_model, inputs=input_data, input_length=data_length,
                                               acoustic_vocab=self.acoustic_vocab)
+        print('predict: {}'.format(predict))
+        print('pinyin: {}'.format(pinyin))
         # 语言模型预测
         with sess.as_default():
             py_in = predict.reshape(1, -1)

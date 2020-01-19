@@ -11,6 +11,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 from keras.models import Model
 from keras.utils import multi_gpu_model
+import tensorflow as tf
 
 from DFCNN_Transformer.util.util import Util
 
@@ -45,11 +46,11 @@ class CNNCTCModel(object):
         self.h7 = Dropout(0.3)(self.h7)
         self.outputs = CNNCTCModel.dense(self.vocab_size, activation='softmax')(self.h7)
 
-        # 采用全局平均池化代替Dense
-        # self.h6 = nin(self.h5, self.vocab_size)
-        # [10, 200, 25, 1424]
-        # self.h7 = global_avg_pool(self.h6)
-        # self.model.outputs = tf.nn.softmax(self.h7)
+        # # 采用全局平均池化代替Dense
+        # self.h6 = CNNCTCModel.nin(self.h5, self.vocab_size)
+        # # [10, 200, 25, 1424]
+        # self.h7 = CNNCTCModel.global_avg_pool(self.h6)
+        # self.outputs = CNNCTCModel.dense(self.vocab_size, activation='softmax')(self.h7)
 
         self.model = Model(inputs=self.inputs, outputs=self.outputs)
         self.model.summary()

@@ -30,6 +30,7 @@ session = InteractiveSession(config=config)
 from DFCNN_Transformer import args
 from DFCNN_Transformer.util.util import SortedByCountsDict, Util, DataGenerator
 from DFCNN_Transformer.module.am_cnn_ctc import CNNCTCModel
+from DFCNN_Transformer.module.am_cnn_rnn_ctc import CNNRNNCTCModel
 from DFCNN_Transformer.module.lm_transformer import TransformerModel
 
 logger = logging.getLogger()
@@ -99,6 +100,7 @@ class Instructor(object):
         :return:
         """
         model = CNNCTCModel(args=self.args, vocab_size=self.acoustic_vocab_size)
+        # model = CNNRNNCTCModel(args=self.args, vocab_size=self.acoustic_vocab_size)
 
         hp = self.args
         hp.batch_size = self.args.am_batch_size
@@ -111,7 +113,6 @@ class Instructor(object):
         hp.data_type = 'dev'
         dev_generator = DataGenerator(audio_paths=dev_audio_paths, labels=dev_labels, pinyins=dev_pinyins,
                                       hp=hp, acoustic_vocab=self.acoustic_vocab)
-        # ckpt = "model_{epoch:02d}-{val_loss:.2f}.hdf5"
         cpCallBack = ModelCheckpoint(os.path.join(self.args.AmModelFolder, hp.am_ckpt), verbose=1, save_best_only=True)
         tbCallBack = keras.callbacks.TensorBoard(log_dir=self.args.AmModelTensorBoard, histogram_freq=0,
                                                  write_graph=True, write_images=True, update_freq='epoch')
@@ -168,12 +169,10 @@ class Instructor(object):
         with tf.Session(graph=lm_model.graph, config=config) as sess:
             merged = tf.summary.merge_all()
             sess.run(tf.global_variables_initializer())
-            add_num = 0
             if os.path.exists(hp.LmModelFolder):
                 print('loading language model...')
                 latest = tf.train.latest_checkpoint(hp.LmModelFolder)
                 if latest is not None:
-                    add_num = int(latest.split('_')[-2])
                     saver.restore(sess, latest)
             writer = tf.summary.FileWriter(hp.LmModelTensorboard, tf.get_default_graph())
             for k in range(epochs):
@@ -191,7 +190,7 @@ class Instructor(object):
                             rs = sess.run(merged, feed_dict=feed)
                             writer.add_summary(rs, k * batch_num + i)
                 print('epochs', k + 1, ': average loss = ', total_loss / batch_num)
-                saver.save(sess, hp.LmModelFolder + 'model_%d_%.3f.ckpt' % (k + 1 + add_num, total_loss / batch_num))
+                saver.save(sess, hp.LmModelFolder + hp.lm_ckpt)
             writer.close()
         pass
 
@@ -206,9 +205,9 @@ class Instructor(object):
             shutil.copyfile(before_dir, after_dir)
 
         train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins = self.generate()
-        # logger.info('start train am model!')
-        # self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
-        # logger.info('end train am model!')
+        logger.info('start train am model!')
+        self.train_am(train_audio_paths, train_labels, train_pinyins, dev_audio_paths, dev_labels, dev_pinyins)
+        logger.info('end train am model!')
 
         logger.info('start train lm model!')
         self.train_lm(train_labels=train_labels, train_pinyins=train_pinyins)
