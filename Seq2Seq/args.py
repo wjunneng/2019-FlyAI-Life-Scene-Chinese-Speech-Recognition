@@ -67,7 +67,7 @@ maxlen_out = 150
 
 # --------------------------------------------------optimizer
 # learning rate
-lr = 0.001
+lr = 0.005
 # tunable scalar multiply to learning rate
 k = 0.2
 # warmup steps
@@ -75,7 +75,7 @@ warmup_steps = 4000
 
 # --------------------------------------------------Model parameters
 # dimension of feature
-input_dim = 128
+input_dim = 100
 # window size for FFT (ms)
 window_size = 25
 # window stride for FFT (ms)

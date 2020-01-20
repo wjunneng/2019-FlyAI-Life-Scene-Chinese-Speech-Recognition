@@ -23,7 +23,7 @@ class SortedByCountsDict(object):
     构建具备自动排序的字典类
     """
 
-    def __init__(self, dump_dir):
+    def __init__(self, dump_dir, type='predict'):
         # dump dir
         self.dump_dir = dump_dir
         # 字：次数
@@ -33,8 +33,8 @@ class SortedByCountsDict(object):
         # 索引：字
         self.i_vocab = {}
 
-        if os.path.exists(dump_dir):
-            self.vocab = self.load_pkl(load_dir=self.dump_dir)
+        if os.path.exists(dump_dir) and type == 'predict':
+            self.vocab = SortedByCountsDict.load_pkl(load_dir=self.dump_dir)
 
     def append_token(self, token: str):
         if token not in self.s_vocab:
@@ -66,14 +66,16 @@ class SortedByCountsDict(object):
         return self.i_vocab
 
     def dump_pkl(self):
+        self.vocab = self.get_vocab()
         with open(self.dump_dir, mode='wb') as file:
             pickle.dump(file=file, obj=self.vocab)
 
-    def load_pkl(self, load_dir):
+    @staticmethod
+    def load_pkl(load_dir):
         with open(load_dir, mode='rb') as file:
-            self.vocab = pickle.load(file=file)
+            vocab = pickle.load(file=file)
 
-        return self.vocab
+        return vocab
 
 
 class Util(object):
@@ -451,7 +453,8 @@ class AiShellDataset(Dataset):
         sample = self.samples[i]
         wave = os.path.join(self.args.wav_dir, sample['wav'])
 
-        feature = Util.extract_feature(input_file=wave, feature=self.args.feature_type, dim=self.args.d_input, cmvn=True)
+        feature = Util.extract_feature(input_file=wave, feature=self.args.feature_type, dim=self.args.d_input,
+                                       cmvn=True)
         # zero mean and unit variance
         feature = (feature - feature.mean()) / feature.std()
         feature = Util.spec_augment(feature)

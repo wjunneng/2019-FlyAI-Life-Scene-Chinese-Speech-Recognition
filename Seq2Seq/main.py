@@ -34,7 +34,7 @@ class Instructor(object):
 
     def __init__(self, args):
         self.args = args
-        self.sortedDict = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir)
+        self.sortedDict = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir, type='train')
 
         self.run()
 
@@ -45,8 +45,8 @@ class Instructor(object):
         # wav文件路径
         audio_paths = [i['audio_path'] for i in audio_paths]
         # waw文本数据 TODO：此处包含空格, 测试去掉空格能否提升模型性能
-        # labels = [[j for j in list(i['label']) if j != ''] for i in labels]
-        labels = [list(i['label']) for i in labels]
+        labels = [[j for j in list(i['label']) if j != ''] for i in labels]
+        # labels = [list(i['label']) for i in labels]
 
         # 构建字典
         for label in labels:

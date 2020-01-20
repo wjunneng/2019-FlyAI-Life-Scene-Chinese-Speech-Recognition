@@ -17,8 +17,9 @@ class Model(Base):
     def __init__(self, dataset):
         self.dataset = dataset
         self.args = args
-        self.vocab = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir).get_vocab()
-        self.i_vocab = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir).get_i_vocab()
+        sbcd = SortedByCountsDict(dump_dir=self.args.vocab_dump_dir)
+        self.vocab = sbcd.get_vocab()
+        self.i_vocab = sbcd.get_i_vocab()
         self.model = Util.load_checkpoint(os.path.join(self.args.output_dir, 'checkpoint.tar'))
 
     def predict(self, **data):
