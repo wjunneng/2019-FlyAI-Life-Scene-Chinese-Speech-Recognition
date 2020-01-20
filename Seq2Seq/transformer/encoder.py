@@ -5,7 +5,7 @@ import sys
 os.chdir(sys.path[0])
 import torch.nn as nn
 
-from Seq2Seq.Utils.util import Util
+from Seq2Seq.utils.util import Util
 from Seq2Seq.transformer.module import PositionalEncoding, PositionwiseFeedForward, MultiHeadAttention
 
 

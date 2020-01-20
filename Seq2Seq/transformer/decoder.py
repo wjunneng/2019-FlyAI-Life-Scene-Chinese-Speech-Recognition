@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from Seq2Seq.args import IGNORE_ID
-from Seq2Seq.Utils.util import Util
+from Seq2Seq.utils.util import Util
 from Seq2Seq.transformer.module import PositionalEncoding, PositionwiseFeedForward, MultiHeadAttention
 
 

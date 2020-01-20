@@ -96,7 +96,7 @@ eos_id = 1
 # clip gradients at an absolute value of
 grad_clip = 5.
 # print training/validation stats  every __ batches
-print_freq = 5
+print_freq = 10
 
 # --------------------------------------------------Prediction parameters
 # Beam size
