@@ -8,11 +8,16 @@ import torch
 import pickle
 import librosa
 import random
+import time
 import numpy as np
 import torch.nn.functional as F
+import soundfile as sf
 from collections import OrderedDict
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from python_speech_features import logfbank
+from sklearn import preprocessing
 
 from Seq2Seq.args import IGNORE_ID
 
@@ -49,7 +54,7 @@ class SortedByCountsDict(object):
         if len(self.vocab) != 0:
             return self.vocab
 
-        before = {'<sos>': 0, '<eos>': 1}
+        before = {'<pad>': 0, '<sos>': 1, '<eos>': 2}
         after = dict(sorted(self.s_vocab.items(), key=lambda item: item[1], reverse=True))
         after = dict(zip(after.keys(), [i + 2 for i in range(len(after))]))
 
@@ -413,33 +418,126 @@ class Util(object):
 
         return state['model']
 
+    @staticmethod
+    def compute_fbank_from_file(file, feature_dim=80):
+        signal, sample_rate = sf.read(file)
+        feature = Util.compute_fbank_from_api(signal, sample_rate, nfilt=feature_dim)
+
+        return feature
+
+    @staticmethod
+    def compute_fbank_from_api(signal, sample_rate, nfilt):
+        """
+        Fbank特征提取, 结果进行零均值归一化操作
+        :param wav_file: 文件路径
+        :return: feature向量
+        """
+        feature = logfbank(signal, sample_rate, nfilt=nfilt, nfft=2048)
+        feature = preprocessing.scale(feature)
+        return feature
+
+    @staticmethod
+    def han2id(line, vocab, PAD_FLAG, PAD, SOS_FLAG, SOS, EOS_FLAG, EOS):
+        """
+        文字转向量 one-hot embedding，没有成功在vocab中找到索引抛出异常，交给上层处理
+        :param line:
+        :param vocab:
+        :return:
+        """
+        try:
+            res = list([])
+            for han in line:
+                if han == PAD_FLAG:
+                    res.append(PAD)
+                elif han == SOS_FLAG:
+                    res.append(SOS)
+                elif han == EOS_FLAG:
+                    res.append(EOS)
+                else:
+                    res.append(vocab[han])
+            return res
+        except ValueError:
+            raise ValueError
+
+    @staticmethod
+    def wav_padding(wav_data_lst):
+        feature_dim = wav_data_lst[0].shape[1]
+        # len(data)实际上就是求语谱图的第一维的长度，也就是n_frames
+        wav_lens = np.array([len(data) for data in wav_data_lst])
+        # 取一个batch中的最长
+        wav_max_len = max(wav_lens)
+        new_wav_data_lst = np.zeros((len(wav_data_lst), wav_max_len, feature_dim), dtype=np.float32)
+        for i in range(len(wav_data_lst)):
+            new_wav_data_lst[i, :wav_data_lst[i].shape[0], :] = wav_data_lst[i]
+        return new_wav_data_lst, wav_lens
+
+    @staticmethod
+    def label_padding(label_data_lst, pad_idx):
+        label_lens = np.array([len(label) for label in label_data_lst])
+        max_label_len = max(label_lens)
+        new_label_data_lst = np.zeros((len(label_data_lst), max_label_len), dtype=np.int32)
+        new_label_data_lst += pad_idx
+        for i in range(len(label_data_lst)):
+            new_label_data_lst[i][:len(label_data_lst[i])] = label_data_lst[i]
+        return new_label_data_lst, label_lens
+
 
 class TransformerOptimizer(object):
     """A simple wrapper class for learning rate scheduling"""
 
-    def __init__(self, optimizer, warmup_steps=4000, k=0.2):
+    def __init__(self, optimizer, k, d_model, warmup_steps=4000):
         self.optimizer = optimizer
         self.k = k
+        self.init_lr = d_model ** (-0.5)
         self.warmup_steps = warmup_steps
-        self.init_lr = 512 ** (-0.5)
-        self.lr = self.init_lr
-        self.warmup_steps = warmup_steps
-        self.k = k
         self.step_num = 0
+        self.visdom_lr = None
 
     def zero_grad(self):
         self.optimizer.zero_grad()
 
     def step(self):
         self._update_lr()
+        self._visdom()
         self.optimizer.step()
 
     def _update_lr(self):
         self.step_num += 1
-        self.lr = self.k * self.init_lr * min(self.step_num ** (-0.5),
-                                              self.step_num * (self.warmup_steps ** (-1.5)))
+        lr = self.k * self.init_lr * min(self.step_num ** (-0.5),
+                                         self.step_num * (self.warmup_steps ** (-1.5)))
         for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
+            param_group['lr'] = lr
+
+    def load_state_dict(self, state_dict):
+        self.optimizer.load_state_dict(state_dict)
+
+    def state_dict(self):
+        return self.optimizer.state_dict()
+
+    def set_k(self, k):
+        self.k = k
+
+    def set_visdom(self, visdom_lr, vis):
+        self.visdom_lr = visdom_lr  # Turn on/off visdom of learning rate
+        self.vis = vis  # visdom enviroment
+        self.vis_opts = dict(title='Learning Rate',
+                             ylabel='Leanring Rate', xlabel='step')
+        self.vis_window = None
+        self.x_axis = torch.LongTensor()
+        self.y_axis = torch.FloatTensor()
+
+    def _visdom(self):
+        if self.visdom_lr is not None:
+            self.x_axis = torch.cat(
+                [self.x_axis, torch.LongTensor([self.step_num])])
+            self.y_axis = torch.cat(
+                [self.y_axis, torch.FloatTensor([self.optimizer.param_groups[0]['lr']])])
+            if self.vis_window is None:
+                self.vis_window = self.vis.line(X=self.x_axis, Y=self.y_axis,
+                                                opts=self.vis_opts)
+            else:
+                self.vis.line(X=self.x_axis, Y=self.y_axis, win=self.vis_window,
+                              update='replace')
 
 
 class AiShellDataset(Dataset):
@@ -488,3 +586,221 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+
+
+class AudioDataset(Dataset):
+    def __init__(self, args, samples):
+        super(AudioDataset, self).__init__()
+        self.args = args
+        self.path_count = len(samples)
+        self.BATCH = args.BATCH
+
+        # 随机选取BATCH个wav数据组成一个batch_wav_data
+        batch_nums = self.path_count // self.BATCH
+        rest = self.path_count % self.BATCH
+        index_list = list(range(0, self.path_count))
+        batch_list = []
+
+        # 多加一个表示最后的一个个数不足的batch
+        if rest != 0:
+            batch_nums += 1
+        for i in range(batch_nums):
+            begin = i * self.args.BATCH
+            end = min(self.path_count, begin + self.args.BATCH)
+            batch_index = index_list[begin: end]
+            dict = {'batch_list': batch_index}
+            batch_list.append(dict)
+
+        self.minibatch = batch_list
+        print('True')
+
+    def __getitem__(self, index):
+        return self.minibatch[index]
+
+    def __len__(self):
+        return len(self.minibatch)
+
+
+class AudioDataLoader(DataLoader):
+    """
+    NOTE: just use batchsize=1 here, so drop_last=True makes no sense here.
+    """
+
+    def __init__(self, *args, feature_dim, char_list, path_list, label_list, arguments, **kwargs):
+        super(AudioDataLoader, self).__init__(*args, **kwargs)
+        self.collate_fn = LFRCollate(feature_dim=feature_dim, char_list=char_list, path_list=path_list,
+                                     label_list=label_list, args=arguments)
+
+
+class LFRCollate(object):
+    """Build this wrapper to pass arguments(LFR_m, LFR_n) to _collate_fn"""
+
+    def __init__(self, feature_dim, char_list, path_list, label_list, args):
+        self.path_list = path_list
+        self.label_list = label_list
+        self.feature_dim = feature_dim
+        self.char_list = char_list
+        self.args = args
+
+    def __call__(self, batch):
+        return LFRCollate._collate_fn(batch=batch, feature_dim=self.feature_dim, char_list=self.char_list, path_list=self.path_list,
+                                      label_list=self.label_list, args=self.args)
+
+    @staticmethod
+    def _collate_fn(batch, feature_dim, char_list, path_list, label_list, args):
+        sub_list = batch[0]['batch_list']
+        label_lst, input_lst, error_count = list([]), list([]), list([])
+        random.shuffle(sub_list)
+        for i in sub_list:
+            try:
+                # get_fbank_and_hanzi_data(i, feature_dim, char_list, path_list, label_list)
+                feature = Util.compute_fbank_from_file(file=os.path.join(args.wav_dir, path_list[i]),
+                                                       feature_dim=feature_dim)
+                label = Util.han2id(line=label_list[i], vocab=char_list, PAD_FLAG=args.PAD_FLAG, PAD=args.PAD,
+                                    SOS_FLAG=args.SOS_FLAG, SOS=args.SOS, EOS_FLAG=args.EOS_FLAG, EOS=args.EOS)
+                # 长度大于1600帧，过长，跳过
+                if len(feature) > 1600:
+                    continue
+
+                input_data = Util.build_LFR_features(inputs=feature, m=args.LFR_m, n=args.LFR_n)
+                label_lst.append(label)
+                input_lst.append(input_data)
+            except ValueError:
+                error_count.append(i)
+                continue
+
+        # 删除异常语音信息
+        if error_count != list([]):
+            input_lst = np.delete(input_lst, error_count, axis=0)
+            label_lst = np.delete(label_lst, error_count, axis=0)
+        pad_wav_data, pad_lengths = Util.wav_padding(input_lst)
+        pad_target_data, _ = Util.label_padding(label_lst, args.IGNORE_ID)
+        padded_input = torch.from_numpy(pad_wav_data).float()
+        input_lengths = torch.from_numpy(pad_lengths)
+        padded_target = torch.from_numpy(pad_target_data).long()
+
+        return padded_input, padded_target, input_lengths
+
+
+class Solver(object):
+    """
+    训练+验证
+    """
+
+    def __init__(self, tr_loader, cv_loader, model, optimizer, args):
+        self.tr_loader = tr_loader
+        self.cv_loader = cv_loader
+
+        self.model = model
+        self.optimizer = optimizer
+
+        # Low frame rate feature
+        self.LFR_m = args.LFR_m
+        self.LFR_n = args.LFR_n
+
+        # Training config
+        self.EPOCHS = args.EPOCHS
+        self.label_smoothing = args.label_smoothing
+        # save and load model
+        self.output_dir = args.output_dir
+        self.checkpoint = args.checkpoint
+        self.continue_from = args.continue_from
+        self.model_path = args.model_path
+        # logging
+        self.print_freq = args.print_freq
+        # visualizing loss using visdom
+        self.tr_loss = torch.Tensor(self.EPOCHS)
+        self.cv_loss = torch.Tensor(self.EPOCHS)
+        self._reset()
+
+    def _reset(self):
+        # Reset
+        if self.continue_from:
+            print('Loading checkpoint model %s' % self.continue_from)
+            package = torch.load(self.continue_from)
+            self.model.load_state_dict(package['state_dict'])
+            self.optimizer.load_state_dict(package['optim_dict'])
+            self.start_epoch = int(package.get('epoch', 1))
+            self.tr_loss[:self.start_epoch] = package['tr_loss'][:self.start_epoch]
+            self.cv_loss[:self.start_epoch] = package['cv_loss'][:self.start_epoch]
+        else:
+            self.start_epoch = 0
+        # Create save folder
+        os.makedirs(self.output_dir, exist_ok=True)
+        self.prev_val_loss = float("inf")
+        self.best_val_loss = float("inf")
+        self.halving = False
+
+    def train(self):
+        # Train model multi-epoches
+        for epoch in range(self.start_epoch, self.EPOCHS):
+            # Train one epoch
+            print("Training...")
+            self.model.train()  # Turn on BatchNorm & Dropout
+            start = time.time()
+            tr_avg_loss = self._run_one_epoch(epoch)
+            print('-' * 85)
+            print('Train Summary | End of Epoch {0} | Time {1:.2f}s | Train Loss {2:.3f}'.format(epoch + 1,
+                                                                                                 time.time() - start,
+                                                                                                 tr_avg_loss))
+            print('-' * 85)
+
+            # Cross validation
+            print('Cross validation...')
+            self.model.eval()  # Turn off Batchnorm & Dropout
+            val_loss = self._run_one_epoch(epoch, cross_valid=True)
+            print('-' * 85)
+            print('Valid Summary | End of Epoch {0} | Time {1:.2f}s | Valid Loss {2:.3f}'.format(epoch + 1,
+                                                                                                 time.time() - start,
+                                                                                                 val_loss))
+            print('-' * 85)
+
+            # Save model each epoch
+            if self.checkpoint:
+                file_path = os.path.join(self.output_dir, 'epoch%d_%.3f.pth.tar' % (epoch + 1, val_loss))
+                torch.save(self.model.serialize(self.model, self.optimizer, epoch + 1, self.LFR_m, self.LFR_n,
+                                                tr_loss=self.tr_loss, cv_loss=self.cv_loss), file_path)
+                print('Saving checkpoint model to %s' % file_path)
+
+            # Save the best model
+            self.tr_loss[epoch] = tr_avg_loss
+            self.cv_loss[epoch] = val_loss
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                file_path = os.path.join(self.output_dir, self.model_path)
+                torch.save(self.model.serialize(self.model, self.optimizer, epoch + 1, self.LFR_m, self.LFR_n,
+                                                tr_loss=self.tr_loss, cv_loss=self.cv_loss), file_path)
+                print("Find better validated model, saving to %s" % file_path)
+
+    def _run_one_epoch(self, epoch, cross_valid=False):
+        start = time.time()
+        total_loss = 0
+
+        loader = self.tr_loader if not cross_valid else self.cv_loader
+        # batch_nums = self.train_batch_nums if not cross_valid else self.verify_batch_nums
+
+        for i, data in enumerate(loader):
+            padded_input, padded_target, input_lengths = data
+            padded_input = padded_input.cuda()
+            input_lengths = input_lengths.cuda()
+            padded_target = padded_target.cuda()
+
+            pred, gold = self.model(padded_input, input_lengths, padded_target)
+            loss, n_correct = Util.cal_performance(pred, gold, smoothing=self.label_smoothing)
+            if not cross_valid:
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+            total_loss += loss.item()
+            non_pad_mask = gold.ne(IGNORE_ID)
+            n_word = non_pad_mask.sum().item()
+
+            if i % self.print_freq == 0:
+                print('Epoch {0} | Iter {1} | Average Loss {2:.3f} | '
+                      'Current Loss {3:.6f} | {4:.1f} ms/batch'.format(
+                    epoch + 1, i + 1, total_loss / (i + 1),
+                    loss.item(), 1000 * (time.time() - start) / (i + 1)),
+                    flush=True)
+
+        return total_loss / (i + 1)

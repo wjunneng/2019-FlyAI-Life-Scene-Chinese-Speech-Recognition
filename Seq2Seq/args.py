@@ -17,6 +17,16 @@ EPOCHS = 10
 BATCH = 10
 model_name = 'Seq2Seq'
 feature_type = 'mfcc'
+# num_workers = 10
+IGNORE_ID = -1
+PAD = 0
+SOS = 1
+EOS = 2
+PAD_FLAG = '<pad>'
+SOS_FLAG = '<sos>'
+EOS_FLAG = '<eos>'
+Flag_List = ['<pad>', '<sos>', '<eos>']
+
 # --------------------------------------------------Low Frame Rate (stacking and skipping frames)
 # Low Frame Rate: number of frames to stack
 LFR_m = 4
@@ -25,7 +35,7 @@ LFR_n = 3
 
 # --------------------------------------------------encoder
 # Dim of encoder input (before LFR)
-d_input = 100
+d_input = 80
 # Number of encoder stacks
 n_layers_enc = 6
 # Number of Multi Head Attention (MHA)
@@ -67,7 +77,7 @@ maxlen_out = 150
 
 # --------------------------------------------------optimizer
 # learning rate
-lr = 0.005
+lr = 0.001
 # tunable scalar multiply to learning rate
 k = 0.2
 # warmup steps
@@ -75,7 +85,7 @@ warmup_steps = 4000
 
 # --------------------------------------------------Model parameters
 # dimension of feature
-input_dim = 100
+input_dim = 80
 # window size for FFT (ms)
 window_size = 25
 # window stride for FFT (ms)
@@ -87,12 +97,13 @@ cmvn = True
 num_layers = 4
 seed = 42  # 随机种子
 
-# --------------------------------------------------Data parameters
-IGNORE_ID = -1
-sos_id = 0
-eos_id = 1
-
 # --------------------------------------------------Training parameters
+# Enables checkpoint saving of model
+checkpoint = False
+# Enables checkpoint saving of model
+continue_from = ''
+# Location to save best validation model
+model_path = 'model.tar'
 # clip gradients at an absolute value of
 grad_clip = 5.
 # print training/validation stats  every __ batches
