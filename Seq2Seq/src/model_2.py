@@ -29,16 +29,16 @@ class Model(Base):
     def predict(self, **data):
         with torch.no_grad():
             audio_path = self.dataset.predict_data(**data)[0]
-            feature = Util.compute_fbank_from_file(file=audio_path, feature_dim=self.args.input_dim)
+            feature = Util.compute_fbank_from_file(file=audio_path,
+                                                   feature_dim=self.args.input_dim)
             input = Util.build_LFR_features(feature, self.args.LFR_m, self.args.LFR_n)
             input = torch.from_numpy(input).float()
             input_length = torch.tensor([input.size(0)], dtype=torch.int)
             input = input.to(DEVICE)
-            nbest_hyps = self.model.recognize(input=input, input_length=input_length, char_list=self.i_vocab, args=args)
-            for i in range(5):
-                pred_label = nbest_hyps[i]['yseq'][1:-1]
-                pred_res = ''.join([self.i_vocab[index] for index in pred_label])
-                print("pred :", pred_res)
+            nbest_hyps = self.model.recognize(input=input, input_length=input_length, char_list=self.vocab, args=args)
+            pred_label = nbest_hyps[0]['yseq'][1:-1]
+            pred_res = ''.join([self.i_vocab[index] for index in pred_label])
+            print("pred :", pred_res)
 
         return pred_res
 

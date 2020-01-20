@@ -56,7 +56,7 @@ class SortedByCountsDict(object):
 
         before = {'<pad>': 0, '<sos>': 1, '<eos>': 2}
         after = dict(sorted(self.s_vocab.items(), key=lambda item: item[1], reverse=True))
-        after = dict(zip(after.keys(), [i + 2 for i in range(len(after))]))
+        after = dict(zip(after.keys(), [i + 3 for i in range(len(after))]))
 
         self.vocab.update(before)
         self.vocab.update(after)
