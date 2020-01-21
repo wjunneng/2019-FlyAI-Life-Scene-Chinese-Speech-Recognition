@@ -15,7 +15,7 @@ from random import shuffle
 from collections import OrderedDict
 from sklearn import preprocessing
 from python_speech_features import logfbank
-
+import librosa
 from keras import backend
 from keras.utils import Sequence
 
@@ -123,10 +123,14 @@ class DataGenerator(Sequence):
             try:
                 file1 = os.path.join(self.data_path, path)
                 if os.path.isfile(file1):
-                    signal, sample_rate = sf.read(file1)
+                    # signal, sample_rate = sf.read(file1)
+                    signal, sample_rate = librosa.load(file1, sr=48000)
                 else:
                     print("file path Error")
                     return 0
+
+                signal = librosa.resample(y=signal, orig_sr=sample_rate, target_sr=16000)
+                sample_rate = 16000
                 fbank = Util.compute_fbank_from_api(signal, sample_rate)
                 input_data = fbank.reshape([fbank.shape[0], fbank.shape[1], 1])
                 data_length = input_data.shape[0] // 8 + 1
@@ -448,7 +452,7 @@ class Util(object):
         :param wav_file: 文件路径
         :return: feature向量
         """
-        feature = logfbank(signal=signal, samplerate=sample_rate, nfilt=nfilt, nfft=2048)
+        feature = logfbank(signal=signal, samplerate=sample_rate, nfilt=nfilt)
         feature = preprocessing.scale(feature)
 
         return feature

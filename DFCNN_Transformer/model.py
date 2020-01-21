@@ -4,6 +4,7 @@ import sys
 
 os.chdir(sys.path[0])
 import torch
+import librosa
 import numpy as np
 import datetime
 from numpy import random
@@ -146,7 +147,10 @@ class Model(Base):
         saver.restore(sess, latest)
 
         # 声学模型预测
-        signal, sample_rate = sf.read(audio_path)
+        # signal, sample_rate = sf.read(audio_path)
+        signal, sample_rate = librosa.load(audio_path, sr=48000)
+        signal = librosa.resample(y=signal, orig_sr=sample_rate, target_sr=16000)
+        sample_rate = 16000
         fbank = Util.compute_fbank_from_api(signal, sample_rate)
         input_data = fbank.reshape([fbank.shape[0], fbank.shape[1], 1])
         print('input_data_length:{}'.format(len(input_data)))

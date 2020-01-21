@@ -420,8 +420,11 @@ class Util(object):
 
     @staticmethod
     def compute_fbank_from_file(file, feature_dim=80):
-        signal, sample_rate = sf.read(file)
-        feature = Util.compute_fbank_from_api(signal, sample_rate, nfilt=feature_dim)
+        # signal, sample_rate = sf.read(file)
+        signal, orig_sr = librosa.load(file, sr=48000)
+        target_sr = 16000
+        signal = librosa.resample(y=signal, orig_sr=orig_sr, target_sr=target_sr)
+        feature = Util.compute_fbank_from_api(signal, target_sr, nfilt=feature_dim)
 
         return feature
 
@@ -432,7 +435,7 @@ class Util(object):
         :param wav_file: 文件路径
         :return: feature向量
         """
-        feature = logfbank(signal, sample_rate, nfilt=nfilt, nfft=2048)
+        feature = logfbank(signal, samplerate=sample_rate, nfilt=nfilt)
         feature = preprocessing.scale(feature)
         return feature
 
@@ -643,7 +646,8 @@ class LFRCollate(object):
         self.args = args
 
     def __call__(self, batch):
-        return LFRCollate._collate_fn(batch=batch, feature_dim=self.feature_dim, char_list=self.char_list, path_list=self.path_list,
+        return LFRCollate._collate_fn(batch=batch, feature_dim=self.feature_dim, char_list=self.char_list,
+                                      path_list=self.path_list,
                                       label_list=self.label_list, args=self.args)
 
     @staticmethod

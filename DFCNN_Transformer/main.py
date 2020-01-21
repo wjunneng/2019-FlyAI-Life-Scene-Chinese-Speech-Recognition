@@ -128,7 +128,7 @@ class Instructor(object):
                                       validation_steps=20,
                                       epochs=hp.epochs,
                                       workers=10,
-                                      use_multiprocessing=False,
+                                      use_multiprocessing=True,
                                       callbacks=[cpCallBack, tbCallBack]
                                       )
 
