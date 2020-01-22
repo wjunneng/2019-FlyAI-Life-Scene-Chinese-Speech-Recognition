@@ -21,6 +21,7 @@ from sklearn import preprocessing
 
 from Seq2Seq.args import IGNORE_ID
 
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class SortedByCountsDict(object):
     """
@@ -785,9 +786,9 @@ class Solver(object):
 
         for i, data in enumerate(loader):
             padded_input, padded_target, input_lengths = data
-            padded_input = padded_input.cuda()
-            input_lengths = input_lengths.cuda()
-            padded_target = padded_target.cuda()
+            padded_input = padded_input.to(DEVICE)
+            input_lengths = input_lengths.to(DEVICE)
+            padded_target = padded_target.to(DEVICE)
 
             pred, gold = self.model(padded_input, input_lengths, padded_target)
             loss, n_correct = Util.cal_performance(pred, gold, smoothing=self.label_smoothing)

@@ -1,3 +1,4 @@
 flyai
 tqdm
 librosa
+python_speech_features
