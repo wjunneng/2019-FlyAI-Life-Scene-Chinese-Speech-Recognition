@@ -97,6 +97,7 @@ class Net(nn.Module):
             # Low Frame Rate Feature
             'LFR_m': LFR_m,
             'LFR_n': LFR_n,
+
             # encoder
             'd_input': model.encoder.d_input,
             'n_layers_enc': model.encoder.n_layers,
@@ -107,6 +108,7 @@ class Net(nn.Module):
             'd_inner': model.encoder.d_inner,
             'dropout': model.encoder.dropout_rate,
             'pe_maxlen': model.encoder.pe_maxlen,
+
             # decoder
             'sos_id': model.decoder.sos_id,
             'eos_id': model.decoder.eos_id,
@@ -114,6 +116,7 @@ class Net(nn.Module):
             'd_word_vec': model.decoder.d_word_vec,
             'n_layers_dec': model.decoder.n_layers,
             'tgt_emb_prj_weight_sharing': model.decoder.tgt_emb_prj_weight_sharing,
+
             # state
             'state_dict': model.state_dict(),
             'optim_dict': optimizer.state_dict(),

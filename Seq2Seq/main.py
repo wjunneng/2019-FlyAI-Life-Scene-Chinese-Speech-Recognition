@@ -8,10 +8,8 @@ import logging
 import torch
 import random
 import numpy as np
-import time
 from time import strftime
 from time import localtime
-from torch.utils.data import DataLoader
 from Seq2Seq import args
 from flyai.dataset import Dataset
 
@@ -110,77 +108,77 @@ class Instructor(object):
                                        label_list=dev_labels,
                                        arguments=self.args)
 
-        # # Epochs
-        # for epoch in range(self.args.EPOCHS):
-        #     # One epoch's training
-        #     # train mode (dropout and batchnorm is used)
-        #     model.train()
-        #     losses = AverageMeter()
-        #
-        #     # Batches
-        #     for i, data in enumerate(train_loader):
-        #         # Move to GPU, if available
-        #         data = tuple(t.to(DEVICE) for t in data)
-        #         padded_input, padded_target, input_lengths = data
-        #
-        #         # Forward prop.
-        #         pred, gold = model(padded_input, input_lengths, padded_target)
-        #         loss, n_correct = Util.cal_performance(pred=pred, gold=gold, smoothing=args.label_smoothing)
-        #         # Back prop.
-        #         optimizer.zero_grad()
-        #         loss.backward()
-        #         # Update weights
-        #         optimizer.step()
-        #         # Keep track of metrics
-        #         losses.update(loss.item())
-        #
-        #         # Print status
-        #         if i % self.args.print_freq == 0:
-        #             logger.info('Epoch: [{0}][{1}/{2}]\t'
-        #                         'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(epoch, i, len(train_loader), loss=losses))
-        #
-        #     logger.info('train_loss:{}/epoch:{}'.format(losses.avg, epoch))
-        #     lr = optimizer._update_lr()
-        #     logger.info('learning_rate:{}/epoch:{}'.format(lr, epoch))
-        #     step_num = optimizer.step_num
-        #     logger.info('Step num: {}\n'.format(step_num))
-        #
-        #     # One epoch's validation
-        #     model.eval()
-        #     losses = AverageMeter()
-        #     # Batches
-        #     for data in valid_loader:
-        #         # Move to GPU, if available
-        #         data = tuple(t.to(DEVICE) for t in data)
-        #         padded_input, padded_target, input_lengths = data
-        #
-        #         with torch.no_grad():
-        #             # Forward prop.
-        #             pred, gold = model(padded_input, input_lengths, padded_target)
-        #             loss, n_correct = Util.cal_performance(pred, gold, smoothing=args.label_smoothing)
-        #
-        #         # Keep track of metrics
-        #         losses.update(loss.item())
-        #
-        #     # Print status
-        #     logger.info('\nValidation Loss {loss.val:.5f} ({loss.avg:.5f})\n'.format(loss=losses))
-        #
-        #     # Check if there was an improvement
-        #     is_best = losses.avg < best_loss
-        #     best_loss = min(losses.avg, best_loss)
-        #     if not is_best:
-        #         epochs_since_improvement += 1
-        #         print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
-        #     else:
-        #         epochs_since_improvement = 0
-        #
-        #     # Save checkpoint
-        #     Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best,
-        #                          output_dir=self.args.output_dir)
+        # Epochs
+        for epoch in range(self.args.EPOCHS):
+            # One epoch's training
+            # train mode (dropout and batchnorm is used)
+            model.train()
+            losses = AverageMeter()
 
-        solver = Solver(tr_loader=train_loader, cv_loader=valid_loader, model=model, optimizer=optimizer,
-                        args=self.args)
-        solver.train()
+            # Batches
+            for i, data in enumerate(train_loader):
+                # Move to GPU, if available
+                data = tuple(t.to(DEVICE) for t in data)
+                padded_input, padded_target, input_lengths = data
+
+                # Forward prop.
+                pred, gold = model(padded_input, input_lengths, padded_target)
+                loss, n_correct = Util.cal_performance(pred=pred, gold=gold, smoothing=args.label_smoothing)
+                # Back prop.
+                optimizer.zero_grad()
+                loss.backward()
+                # Update weights
+                optimizer.step()
+                # Keep track of metrics
+                losses.update(loss.item())
+
+                # Print status
+                if i % self.args.print_freq == 0:
+                    logger.info('Epoch: [{0}][{1}/{2}]\t'
+                                'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(epoch, i, len(train_loader), loss=losses))
+
+            logger.info('train_loss:{}/epoch:{}'.format(losses.avg, epoch))
+            lr = optimizer._update_lr()
+            logger.info('learning_rate:{}/epoch:{}'.format(lr, epoch))
+            step_num = optimizer.step_num
+            logger.info('Step num: {}\n'.format(step_num))
+
+            # One epoch's validation
+            model.eval()
+            losses = AverageMeter()
+            # Batches
+            for data in valid_loader:
+                # Move to GPU, if available
+                data = tuple(t.to(DEVICE) for t in data)
+                padded_input, padded_target, input_lengths = data
+
+                with torch.no_grad():
+                    # Forward prop.
+                    pred, gold = model(padded_input, input_lengths, padded_target)
+                    loss, n_correct = Util.cal_performance(pred, gold, smoothing=args.label_smoothing)
+
+                # Keep track of metrics
+                losses.update(loss.item())
+
+            # Print status
+            logger.info('\nValidation Loss {loss.val:.5f} ({loss.avg:.5f})\n'.format(loss=losses))
+
+            # Check if there was an improvement
+            is_best = losses.avg < best_loss
+            best_loss = min(losses.avg, best_loss)
+            if not is_best:
+                epochs_since_improvement += 1
+                print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            else:
+                epochs_since_improvement = 0
+
+            # Save checkpoint
+            Util.save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best,
+                                 output_dir=self.args.output_dir)
+
+        # solver = Solver(tr_loader=train_loader, cv_loader=valid_loader, model=model, optimizer=optimizer,
+        #                 args=self.args)
+        # solver.train()
 
     def run(self):
         train_audio_paths, train_labels, dev_audio_paths, dev_labels = self.generate()

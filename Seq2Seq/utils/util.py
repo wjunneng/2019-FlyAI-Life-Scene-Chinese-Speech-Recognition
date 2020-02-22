@@ -11,7 +11,6 @@ import random
 import time
 import numpy as np
 import torch.nn.functional as F
-import soundfile as sf
 from collections import OrderedDict
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
@@ -21,6 +20,9 @@ from sklearn import preprocessing
 
 from Seq2Seq.args import IGNORE_ID
 
+import warnings
+
+warnings.filterwarnings('ignore')
 
 class SortedByCountsDict(object):
     """

@@ -4,6 +4,8 @@ import sys
 
 os.chdir(sys.path[0])
 
+predict_batch = True
+BATCH = 4
 # wav 路径
 wav_dir = os.path.join(os.getcwd(), 'data/input')
 # 日志路径
@@ -13,8 +15,6 @@ vocab_dump_dir = os.path.join(os.getcwd(), 'data/vocab.pkl')
 # 输出路径
 output_dir = os.path.join(os.getcwd(), 'data/output')
 
-EPOCHS = 10
-BATCH = 10
 model_name = 'Seq2Seq'
 feature_type = 'mfcc'
 # num_workers = 10
