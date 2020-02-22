@@ -1,0 +1,123 @@
+{
+  "id": "CommonVoiceChineseASR01",
+  "name": "CommonVoice汉语语音识别",
+  "introduce": "本数据集是Mozilla收集的汉语普通话语音数据集，旨在帮助教会机器真人的说话方式。数据集共包含6234条语音文件，内容涵盖了历史、文学、科学等多方面知识。",
+  "tags": [
+    "语音"
+  ],
+  "references": {
+    "source": "https://voice.mozilla.org/zh-CN",
+    "pager": [
+     
+    ]
+  },
+  "columns": [
+    {
+      "name": "audio_path",
+      "type": "url",
+      "val": "not_none",
+      "remark": "语音文件路径"
+    },
+    {
+      "name": "label",
+      "type": "string",
+      "val": "not_none",
+      "remark": "标注"
+    }
+  ],
+  "_tip": "以下不需要修改",
+  "token": "user10a61f0ed47c0192ac6acd04",
+  "type": "money",
+  "begin": "2019-05-10 15:00:00",
+  "degree": 0.25,
+  "def_score": 85,
+  "image": "https://dataset.flyai.com/ATEC_flyai.png",
+  "category": "nlp",
+  "description": {
+    "cn": "通过实现算法并提交训练，获取奖金池奖金。小提示：抢先更新算法排行榜，有更大机会获取高额奖金哦！",
+    "en": ""
+  },
+  "rule": {
+    "type": "new_rule",
+    "text": [
+      [
+        "各项奖金获得计算公式参考如下：",
+        "参与奖(Participation Award)",
+        "R表示：得分的区间系数；T表示为：相同得分区间得分人数；",
+        "100-标准分：分为5个区间系数；R1(0.02),R2(0.08),R3(0.15),R4(0.25),R5(0.5)"
+      ],
+      [
+        "突破奖(Prizes)",
+        "N表示：第N次更新排行榜；Prizes_N-1表示：排行榜更新后已发放的突破奖金"
+      ],
+      [
+        "排名奖(Ranking Award)",
+        "Time_p表示：相关截止日期的奖金发放系数；K表示：每次发放排行榜前三名的分配系数；"
+      ]
+    ],
+    "url": [
+      "https://dataset.flyai.com/Participation1.png",
+      "https://dataset.flyai.com/Prizes_flyai1.png",
+      "https://dataset.flyai.com/ranking.png"
+    ]
+  },
+  "license": "Public",
+  "repo": {
+    "train": {
+      "type": "csv",
+      "data": "train.zip"
+    },
+    "test": {
+      "type": "csv",
+      "data": "test.zip"
+    },
+    "validation": {
+      "type": "csv",
+      "data": "validation.zip"
+    },
+    "dev": {
+      "type": "csv",
+      "data": "dev.zip"
+    }
+  },
+  "keep": "",
+  "bonus_pool": 4000,
+  "prize": {
+    "explain": [
+      {
+        "name": "参与奖（总奖金30%）",
+        "number": "所有人",
+        "content": "不同得分区间获得相应的竞赛奖金"
+      },
+      {
+        "name": "突破奖（总奖金20%）",
+        "number": "所有人",
+        "content": "更新排行榜得分，获取相应竞赛奖金"
+      },
+      {
+        "name": "排名奖（总奖金50%）",
+        "number": "第一周/月前3名（冠、亚、季军）",
+        "content": "项目上线第一周、第一个月; Time_P(周) = 0.5，Time_P(月) = 0.5；K1=0.5，K2=0.3，K3=0.2；"
+      },
+      {
+        "name": "不同框架奖励",
+        "number": "所有人",
+        "content": "获得60FAI币用于GPU训练资源消耗"
+      }
+    ],
+    "remarks": [
+      "上线时间：2019-05-10",
+      "周排行奖结算时间：2019-05-17 15:00:00；月排名奖结算时间：2019-06-10 15:00:00",
+      "奖金获取标准：85<Score 按照得分比例获取奖金",
+      "获得奖金分为3部分：参与奖、突破奖为审核完毕实时获取的奖金，排名奖需在规定时间结束后根据排名顺序获得",
+      "Bouns表示为：奖金池总金额；Score表示为：模型得分；",
+      "【参与奖】相同得分区间无法再次获得奖励"
+    ]
+  },
+  "review": [
+    "准确率（Accuracy）：对于给定的测试数据集，预测正确的样本数与实际总样本数之比",
+    "True，表示预测正确的样本数数量",
+    "Total Number of Samples，表示实际总样本数数量",
+    "计算公式如下："
+  ]
+}
