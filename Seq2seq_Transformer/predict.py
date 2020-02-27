@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-实现模型的预测
-"""
-from flyai.dataset import Dataset
+import os
+import sys
+
+os.chdir(sys.path[0])
 

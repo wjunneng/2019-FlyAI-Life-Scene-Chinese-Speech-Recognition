@@ -353,7 +353,7 @@ class AudioDataset(Dataset):
 if __name__ == '__main__':
     pass
     # 处理训练集和验证集
-    Util.deal_train_dev()
+    # Util.deal_train_dev()
 
     # 处理测试集
     # Util.deal_test()

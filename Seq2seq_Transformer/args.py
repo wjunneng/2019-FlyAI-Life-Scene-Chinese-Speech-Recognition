@@ -1,3 +1,7 @@
+import os
+import sys
+
+os.chdir(sys.path[0])
 # -* model arguments *-
 # 模型迭代次数
 total_epochs = 60
@@ -27,3 +31,10 @@ input_size = 40
 vocab = {'<PAD>': 0, '<BOS>': 1, '<EOS>': 2, '<UNK>': 3}
 # 需要时刻注意是否更新
 vocab_size = 3863
+
+# -----------ARGS---------------------
+data_dir = os.path.join(os.getcwd(), "data")
+input_dir = os.path.join(data_dir, 'input')
+dev_csv_path = os.path.join(input_dir, 'dev.csv')
+words_json_path = os.path.join(input_dir, 'words.json')
+vocab_txt_path = os.path.join(input_dir, 'vocab.txt')
