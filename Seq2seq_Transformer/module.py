@@ -11,7 +11,7 @@ import numpy as np
 from torch import nn
 import torch.nn.functional as F
 
-from Seq2seq_Transformer.src.util import Util
+from Seq2seq_Transformer.util import Util
 from Seq2seq_Transformer import args
 
 

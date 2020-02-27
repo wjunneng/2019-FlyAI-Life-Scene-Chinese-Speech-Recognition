@@ -7,10 +7,66 @@ os.chdir(sys.path[0])
 import torch
 import copy
 import pandas as pd
+import torchaudio as ta
 import numpy as np
-from flyai.dataset import Dataset
-
+from torch.utils.data import Dataset
 from Seq2seq_Transformer import args
+
+
+class Util(object):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    # 定义优化器以及学习率更新函数
+    def get_learning_rate(step):
+        return args.lr_factor * args.model_size ** (-0.5) * min(step ** (-0.5), step * args.warmup_steps ** (-1.5))
+
+    @staticmethod
+    def collate_fn(batch):
+        """
+        收集函数，将同一批内的特征填充到相同的长度，并在文本中加上起始和结束标记
+        :param batch:
+        :return:
+        """
+        features_length = [data[0].shape[0] for data in batch]
+        max_feat_length = max(features_length)
+        padded_features = []
+
+        if len(batch[0]) == 2:
+            targets_length = [len(data[1]) for data in batch]
+            max_text_length = max(targets_length)
+            padded_targets = []
+
+        for parts in batch:
+            feat = parts[0]
+            feat_len = feat.shape[0]
+            padded_features.append(
+                np.pad(feat, ((0, max_feat_length - feat_len), (0, 0)), mode='constant', constant_values=0.0))
+
+            if len(batch[0]) == 2:
+                target = parts[1]
+                text_len = len(target)
+                padded_targets.append([args.vocab['<BOS>']] + target + [args.vocab['<EOS>']] + [args.vocab['<PAD>']] * (
+                        max_text_length - text_len))
+
+        if len(batch[0]) == 2:
+            return torch.FloatTensor(padded_features), torch.LongTensor(padded_targets)
+        else:
+            return torch.FloatTensor(padded_features)
+
+    @staticmethod
+    def get_seq_mask(targets):
+        """
+        遮掉未来的文本信息
+        :param targets:
+        :return:
+        """
+        batch_size, steps = targets.size()
+        seq_mask = torch.ones([batch_size, steps, steps], device=targets.device)
+        seq_mask = torch.tril(seq_mask).bool()
+
+        return seq_mask
 
 
 class DataUtil(object):
@@ -53,6 +109,52 @@ class DataUtil(object):
                 file.write(key + ' ' + str(value) + '\n')
 
         return len(vocab)
+
+
+class AudioDataset(Dataset):
+    def __init__(self, audios_list, labels_list=None, unit2idx=None):
+        self.audios_list = audios_list
+        self.unit2idx = unit2idx
+
+        if labels_list is not None:
+            self.targets_list = []
+            for line in labels_list:
+                label = []
+                for c in line:
+                    if c == ' ':
+                        label.append(self.unit2idx['#'])
+                    elif c in self.unit2idx:
+                        label.append(self.unit2idx[c])
+                    else:
+                        label.append(self.unit2idx['<UNK>'])
+                self.targets_list.append(label)
+        else:
+            self.targets_list = None
+
+        self.lengths = len(self.audios_list)
+
+    def __getitem__(self, index):
+        path = os.path.join(args.input_dir, self.audios_list[index])
+        # 加载wav文件
+        wavform, _ = ta.load_wav(path)
+        feature = ta.compliance.kaldi.fbank(wavform, num_mel_bins=40)
+        # 特征归一化
+        mean = torch.mean(feature)
+        std = torch.std(feature)
+        feature = (feature - mean) / std
+
+        if self.targets_list is not None:
+            targets = self.targets_list[index]
+            return feature, targets
+        else:
+            return feature
+
+    def __len__(self):
+        return self.lengths
+
+    @property
+    def idx2char(self):
+        return {i: c for (c, i) in self.unit2idx.items()}
 
 
 if __name__ == '__main__':

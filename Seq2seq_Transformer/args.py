@@ -14,15 +14,15 @@ num_enc_blocks = 6
 # 解码器层数
 num_dec_blocks = 6
 # 残差连接丢弃率
-residual_dropout_rate = 0.5
+residual_dropout_rate = 0.3
 # 是否共享编码器词嵌入的权重
 share_embedding = True
 # 指定批大小 [batch:16->Global Step:1280]
-batch_size = 24
+batch_size = 4
 # 热身步数
 warmup_steps = 12000
 # 学习率因子
-lr_factor = 1.0
+lr_factor = 1
 # 梯度累计步数
 accu_grads_steps = 8
 # 输入特征维度
@@ -35,6 +35,8 @@ vocab_size = 3863
 # -----------ARGS---------------------
 data_dir = os.path.join(os.getcwd(), "data")
 input_dir = os.path.join(data_dir, 'input')
+data_model_dir = os.path.join(data_dir, 'model')
 dev_csv_path = os.path.join(input_dir, 'dev.csv')
 words_json_path = os.path.join(input_dir, 'words.json')
 vocab_txt_path = os.path.join(input_dir, 'vocab.txt')
+
