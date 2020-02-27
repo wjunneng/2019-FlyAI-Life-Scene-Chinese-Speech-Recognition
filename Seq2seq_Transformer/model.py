@@ -47,7 +47,7 @@ class Model(Base):
         dataset = AudioDataset(audios_list=[audio_path])
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0, pin_memory=False,
                                 collate_fn=Util.collate_fn)
-        checkpoints = torch.load(os.path.join(self.args.data_model_dir, 'model.epoch.30.pt'))
+        checkpoints = torch.load(os.path.join(self.args.data_model_dir, 'model.epoch.59.pt'))
         eval_model.load_state_dict(checkpoints)
 
         recognizer = Recognizer(eval_model, unit2char=idx2unit)

@@ -81,14 +81,15 @@ class Run(object):
 
                     optimizer.step()
                     optimizer.zero_grad()
-                    if global_step % 2 == 0:
+                    if global_step % 10 == 0:
                         print('-Training-Epoch-%d, Global Step:%d, lr:%.8f, Loss:%.5f' % (
                             epoch, global_step, lr, step_loss / self.args.accu_grads_steps))
                     global_step += 1
                     step_loss = 0
 
                     # 学习率更新
-                    lr = Util.get_learning_rate(global_step)
+                    # lr = Util.get_learning_rate(global_step)
+                    lr = self.args.lr_factor
                     for param_group in optimizer.param_groups:
                         param_group['lr'] = lr
 

@@ -22,15 +22,15 @@ batch_size = 4
 # 热身步数
 warmup_steps = 12000
 # 学习率因子
-lr_factor = 1
+lr_factor = 0.0005
 # 梯度累计步数
 accu_grads_steps = 8
 # 输入特征维度
-input_size = 40
+input_size = 80
 
 vocab = {'<PAD>': 0, '<BOS>': 1, '<EOS>': 2, '<UNK>': 3}
 # 需要时刻注意是否更新
-vocab_size = 3863
+vocab_size = 766
 
 # -----------ARGS---------------------
 data_dir = os.path.join(os.getcwd(), "data")

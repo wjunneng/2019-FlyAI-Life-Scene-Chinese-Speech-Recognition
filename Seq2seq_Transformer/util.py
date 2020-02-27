@@ -14,9 +14,6 @@ from Seq2seq_Transformer import args
 
 
 class Util(object):
-    def __init__(self):
-        pass
-
     @staticmethod
     # 定义优化器以及学习率更新函数
     def get_learning_rate(step):
@@ -29,7 +26,11 @@ class Util(object):
         :param batch:
         :return:
         """
-        features_length = [data[0].shape[0] for data in batch]
+        if len(batch) == 1:
+            features_length = [data.shape[0] for data in batch]
+        else:
+            features_length = [data[0].shape[0] for data in batch]
+
         max_feat_length = max(features_length)
         padded_features = []
 
@@ -39,7 +40,11 @@ class Util(object):
             padded_targets = []
 
         for parts in batch:
-            feat = parts[0]
+            if len(batch) == 1:
+                feat = parts
+            else:
+                feat = parts[0]
+
             feat_len = feat.shape[0]
             padded_features.append(
                 np.pad(feat, ((0, max_feat_length - feat_len), (0, 0)), mode='constant', constant_values=0.0))
@@ -137,7 +142,7 @@ class AudioDataset(Dataset):
         path = os.path.join(args.input_dir, self.audios_list[index])
         # 加载wav文件
         wavform, _ = ta.load_wav(path)
-        feature = ta.compliance.kaldi.fbank(wavform, num_mel_bins=40)
+        feature = ta.compliance.kaldi.fbank(wavform, num_mel_bins=args.input_size)
         # 特征归一化
         mean = torch.mean(feature)
         std = torch.std(feature)

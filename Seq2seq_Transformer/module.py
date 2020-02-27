@@ -378,7 +378,7 @@ class Transformer(nn.Module):
 
 # 定义解码识别模块
 class Recognizer(object):
-    def __init__(self, model, unit2char=None, beam_width=5, max_len=100):
+    def __init__(self, model, unit2char=None, beam_width=10, max_len=100):
         self.model = model
         self.model.eval()
         self.unit2char = unit2char
@@ -403,7 +403,9 @@ class Recognizer(object):
         stop_or_not = torch.zeros_like(global_scores, dtype=torch.bool)
 
         def decode_step(pred_hist, scores, flag):
-            """ decode an utterance in a stepwise way"""
+            """
+                decode an utterance in a stepwise way
+            """
             batch_log_probs = self.model.decoder.recognize(pred_hist, beam_enc_states, beam_enc_mask).detach()
             last_k_scores, last_k_preds = batch_log_probs.topk(self.beam_width)  # 计算每个分支最大的beam_width个标记
             # 分数更新
@@ -418,13 +420,15 @@ class Recognizer(object):
             best_k_preds = torch.index_select(pred, dim=0, index=best_k_indices)
             # 判断最后一个是不是结束标记
             flag = torch.eq(best_k_preds[:, -1], args.vocab['<EOS>']).view(-1, 1)
+
             return best_k_preds, scores, flag
 
         with torch.no_grad():
             for _ in range(1, self.max_len + 1):
                 preds, global_scores, stop_or_not = decode_step(preds, global_scores, stop_or_not)
                 # 判断是否停止，任意分支解码到结束标记或者达到最大解码步数则解码停止
-                if stop_or_not.sum() > 0: break
+                if stop_or_not.sum() > 0:
+                    break
 
             max_indices = torch.argmax(global_scores, dim=-1).long()
             preds = preds.view(self.beam_width, -1)
