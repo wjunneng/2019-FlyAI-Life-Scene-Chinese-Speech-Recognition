@@ -9,6 +9,7 @@ import copy
 import pandas as pd
 import torchaudio as ta
 import numpy as np
+import librosa
 from torch.utils.data import Dataset
 from Seq2seq_Transformer import args
 
@@ -26,7 +27,7 @@ class Util(object):
         :param batch:
         :return:
         """
-        if len(batch) == 1:
+        if len(batch) == 1 and isinstance(batch[0], tuple) is False:
             features_length = [data.shape[0] for data in batch]
         else:
             features_length = [data[0].shape[0] for data in batch]
@@ -40,7 +41,7 @@ class Util(object):
             padded_targets = []
 
         for parts in batch:
-            if len(batch) == 1:
+            if len(batch) == 1 and isinstance(batch[0], tuple) is False:
                 feat = parts
             else:
                 feat = parts[0]
@@ -138,10 +139,32 @@ class AudioDataset(Dataset):
 
         self.lengths = len(self.audios_list)
 
+    def draw(self, nframes, framerate, data):
+        """
+        :param nframes: 采样点个数
+        :param framerate: 采样频率
+        :return:
+        """
+        from matplotlib import pyplot as plt
+        # 采样点的时间间隔
+        sample_time = 1 / framerate
+        # 20毫秒左右
+        print('一帧持续的时间{}'.format(sample_time))
+        # 声音信号的长度
+        time = nframes / framerate
+
+        x_seq = np.arange(0, time, sample_time)
+        x_seq = x_seq[:nframes, ]
+        plt.plot(x_seq, data.reshape([-1, 1]), 'blue')
+        plt.xlabel("time (s)")
+        plt.show()
+
     def __getitem__(self, index):
         path = os.path.join(args.input_dir, self.audios_list[index])
         # 加载wav文件
-        wavform, _ = ta.load_wav(path)
+        wavform, framerate = ta.load_wav(path)
+        wavform = ta.transforms.Resample(orig_freq=framerate, new_freq=16000)(wavform)
+        self.draw(nframes=wavform.shape[1], framerate=16000, data=wavform)
         feature = ta.compliance.kaldi.fbank(wavform, num_mel_bins=args.input_size)
         # 特征归一化
         mean = torch.mean(feature)

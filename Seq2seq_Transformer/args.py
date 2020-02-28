@@ -26,7 +26,7 @@ lr_factor = 0.0005
 # 梯度累计步数
 accu_grads_steps = 8
 # 输入特征维度
-input_size = 80
+input_size = 64
 
 vocab = {'<PAD>': 0, '<BOS>': 1, '<EOS>': 2, '<UNK>': 3}
 # 需要时刻注意是否更新
@@ -35,6 +35,7 @@ vocab_size = 766
 # -----------ARGS---------------------
 data_dir = os.path.join(os.getcwd(), "data")
 input_dir = os.path.join(data_dir, 'input')
+output_dir = os.path.join(data_dir, 'output')
 data_model_dir = os.path.join(data_dir, 'model')
 dev_csv_path = os.path.join(input_dir, 'dev.csv')
 words_json_path = os.path.join(input_dir, 'words.json')

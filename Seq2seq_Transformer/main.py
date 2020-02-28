@@ -54,7 +54,8 @@ class Run(object):
         dataloader = DataLoader(dataset, batch_size=self.args.batch_size, shuffle=True, num_workers=0, pin_memory=False,
                                 collate_fn=Util.collate_fn)
 
-        lr = Util.get_learning_rate(step=1)
+        # lr = Util.get_learning_rate(step=1)
+        lr = self.args.lr_factor
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.98), eps=1e-9)
 
         if not os.path.exists(self.args.data_model_dir):
